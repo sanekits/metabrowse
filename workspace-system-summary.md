@@ -1,5 +1,8 @@
 # Workspace System Summary
 
+## What about?
+- Do we even need an app in petra?  We could just launch vscode in a Space and have it render a web app that runs in Edge side panel?
+
 Here’s the distilled state of things — decisions made vs. open questions.
 
 Original chatgpt conversation:
