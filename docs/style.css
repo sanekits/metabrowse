@@ -22,33 +22,39 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Parent navigation */
-.parent-nav {
-  margin-bottom: 20px;
+/* Breadcrumb navigation */
+h1.breadcrumbs {
+  margin: 0 0 20px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-size: 1.4em;
+  color: #2c3e50;
+  font-weight: normal;
+  border-bottom: none;
 }
 
-.parent-link {
-  display: inline-block;
-  padding: 8px 16px;
-  background-color: #ecf0f1;
-  color: #2c3e50;
+.breadcrumb-link {
+  color: #3498db;
   text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.9em;
   font-weight: 500;
-  transition: background-color 0.2s, color 0.2s;
+  transition: color 0.2s;
 }
 
-.parent-link:hover {
-  background-color: #3498db;
-  color: white;
+.breadcrumb-link:hover {
+  color: #2980b9;
+  text-decoration: underline;
 }
 
-h1 {
+.breadcrumb-separator {
+  margin: 0 10px;
+  color: #7f8c8d;
+  font-weight: 300;
+}
+
+.breadcrumb-current {
   color: #2c3e50;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #3498db;
+  font-weight: 600;
 }
 
 /* Children navigation */
