@@ -21,7 +21,7 @@ class HTMLGenerator:
         self.output_dir = output_dir
         self.env = Environment(loader=FileSystemLoader(str(template_dir)))
 
-    def generate_html(self, html_doc: HTMLDocument, output_path: Path, css_relative_path: str, favicon_relative_path: str, breadcrumbs: list, current_name: str, children: list = None):
+    def generate_html(self, html_doc: HTMLDocument, output_path: Path, css_relative_path: str, favicon_relative_path: str, breadcrumbs: list, current_name: str, children: list = None, edit_url: str = ""):
         """
         Generate an HTML file from an HTMLDocument.
 
@@ -33,6 +33,7 @@ class HTMLGenerator:
             breadcrumbs: List of breadcrumb dicts with 'name' and 'url' keys
             current_name: Name of the current page (last breadcrumb, not a link)
             children: List of child directory dicts with 'name' and 'url' keys
+            edit_url: URL to edit the source file in BBGitHub (empty string if unavailable)
         """
         if children is None:
             children = []
@@ -47,7 +48,8 @@ class HTMLGenerator:
             favicon_path=favicon_relative_path,
             breadcrumbs=breadcrumbs,
             current_name=current_name,
-            children=children
+            children=children,
+            edit_url=edit_url
         )
 
         # Ensure the output directory exists

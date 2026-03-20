@@ -11,12 +11,15 @@ Metabrowse is a markdown-to-HTML static site generator designed for teaching mat
    - Internal navigation links stay in the same tab (target="_self")
 3. **Multi-level hierarchy** - supports unlimited directory nesting (e.g., `text/course/topic/subtopic/README.md`)
 4. **Clickable breadcrumb navigation** - displays full path with each segment clickable
-   - Example: "Metabrowse / / Calcrt / Basics" where "Metabrowse /" and "Calcrt" are links
+   - Example: "Metabrowse / Calcrt / Basics" where "Metabrowse" and "Calcrt" are links
    - Current page shown in bold, not clickable
 5. **Auto-generated child navigation** - automatically detects and displays child directories with README.md files
    - Displayed as horizontal buttons with wrapping support
    - Sorted alphabetically, directory names formatted with title case
 6. **Favicon support** - automatically copies `text/favicon.png` to `docs/` and links it in all pages
+7. **Edit links** - "Edit" button on every page links to source README.md in BBGitHub
+   - Auto-detects repository from git remote
+   - Opens in new tab to preserve navigation state
 
 ## Build Commands
 
@@ -78,6 +81,7 @@ Key method: `generate_target(url)` - creates hash-based target for external URLs
 - Generates clickable breadcrumb navigation via `get_breadcrumbs_from_path()`
 - Calculates relative CSS and favicon paths based on nesting depth
 - Auto-detects child directories containing README.md files via `find_child_directories()`
+- Extracts git repository info via `get_git_info()` and generates BBGitHub edit URLs via `generate_edit_url()`
 
 ## Directory Structure
 
@@ -146,6 +150,8 @@ metabrowse/
 6. **Child directory auto-detection**: `find_child_directories()` scans for subdirectories containing README.md files. Children are sorted alphabetically and displayed as horizontal buttons using flexbox with wrapping.
 
 7. **Favicon handling**: If `text/favicon.png` exists, it's copied to `docs/favicon.png` during build and linked with appropriate relative paths in all generated HTML files.
+
+8. **Edit link generation**: `get_git_info()` parses `git remote get-url origin` to extract organization, repository, and branch. `generate_edit_url()` constructs BBGitHub URLs in the format: `https://bbgithub.dev.bloomberg.com/{org}/{repo}/blob/{branch}/text/{path}/README.md`. Edit links open in new tabs (target="_blank").
 
 ## Development Workflow
 

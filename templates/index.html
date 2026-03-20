@@ -9,14 +9,19 @@
 </head>
 <body>
   <div class="container">
-    <!-- Breadcrumb navigation -->
-    <h1 class="breadcrumbs">
-      {% for crumb in breadcrumbs %}
-      <a href="{{ crumb.url }}" class="breadcrumb-link" target="_self">{{ crumb.name }}</a>
-      <span class="breadcrumb-separator">/</span>
-      {% endfor %}
-      <span class="breadcrumb-current">{{ current_name }}</span>
-    </h1>
+    <!-- Breadcrumb navigation with edit link -->
+    <div class="header-bar">
+      <h1 class="breadcrumbs">
+        {% for crumb in breadcrumbs %}
+        <a href="{{ crumb.url }}" class="breadcrumb-link" target="_self">{{ crumb.name }}</a>
+        <span class="breadcrumb-separator">/</span>
+        {% endfor %}
+        <span class="breadcrumb-current">{{ current_name }}</span>
+      </h1>
+      {% if edit_url %}
+      <a href="{{ edit_url }}" class="edit-link" target="_blank" rel="noopener noreferrer">Edit</a>
+      {% endif %}
+    </div>
 
     {% if children %}
     <!-- Child directories navigation -->

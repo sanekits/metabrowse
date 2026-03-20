@@ -6,6 +6,8 @@ Walks the text/ directory tree, processes each README.md file,
 and generates corresponding index.html files in the docs/ directory.
 """
 
+import re
+import subprocess
 from pathlib import Path
 from parser import MarkdownParser
 from transformer import Transformer
@@ -173,6 +175,83 @@ def find_child_directories(readme_path: Path) -> list[dict[str, str]]:
     return children
 
 
+def get_git_info(project_root: Path) -> tuple[str, str, str]:
+    """
+    Extract git repository information.
+
+    Args:
+        project_root: Path to the project root directory
+
+    Returns:
+        Tuple of (org, repo, branch) or empty strings if git info unavailable
+    """
+    try:
+        # Get remote URL
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        if result.returncode != 0:
+            return ("", "", "")
+
+        remote_url = result.stdout.strip()
+
+        # Parse git@bbgithub.dev.bloomberg.com:org/repo.git or similar
+        # Matches both SSH and HTTPS formats
+        match = re.search(r'[:/]([^/]+)/([^/]+?)(?:\.git)?$', remote_url)
+        if not match:
+            return ("", "", "")
+
+        org = match.group(1)
+        repo = match.group(2)
+
+        # Get current branch
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+
+        branch = result.stdout.strip() if result.returncode == 0 else "main"
+
+        return (org, repo, branch)
+    except Exception:
+        return ("", "", "")
+
+
+def generate_edit_url(readme_path: Path, text_root: Path, org: str, repo: str, branch: str) -> str:
+    """
+    Generate BBGitHub edit URL for a README.md file.
+
+    Args:
+        readme_path: Path to the README.md file
+        text_root: Path to the text/ root directory
+        org: GitHub organization
+        repo: Repository name
+        branch: Git branch name
+
+    Returns:
+        URL to edit the file in BBGitHub, or empty string if git info unavailable
+    """
+    if not org or not repo or not branch:
+        return ""
+
+    # Calculate relative path from project root
+    try:
+        rel_path = readme_path.relative_to(text_root.parent)
+        # Convert Path to forward-slash string for URL
+        path_str = str(rel_path).replace('\\', '/')
+        return f"https://bbgithub.dev.bloomberg.com/{org}/{repo}/blob/{branch}/{path_str}"
+    except ValueError:
+        return ""
+
+
 def build():
     """Main build function."""
     # Setup paths
@@ -185,6 +264,11 @@ def build():
     parser = MarkdownParser()
     transformer = Transformer()
     generator = HTMLGenerator(template_dir, docs_root)
+
+    # Get git repository information for edit links
+    org, repo, branch = get_git_info(project_root)
+    if org and repo:
+        print(f"Git repository: {org}/{repo} (branch: {branch})")
 
     # Copy static assets first
     print("Copying static assets...")
@@ -237,8 +321,11 @@ def build():
         # Find child directories
         children = find_child_directories(readme_path)
 
+        # Generate edit URL
+        edit_url = generate_edit_url(readme_path, text_root, org, repo, branch)
+
         # Generate HTML
-        generator.generate_html(html_doc, output_file, css_path, favicon_path, breadcrumbs, current_name, children)
+        generator.generate_html(html_doc, output_file, css_path, favicon_path, breadcrumbs, current_name, children, edit_url)
 
         print(f"  → Generated: {output_file}")
 
