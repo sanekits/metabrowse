@@ -186,7 +186,8 @@ def get_git_info(project_root: Path) -> tuple[str, str, str]:
         Tuple of (org, repo, branch) or empty strings if git info unavailable
     """
     try:
-        # Get remote URL
+        # Try "origin" first, fall back to first available remote
+        remote_name = None
         result = subprocess.run(
             ["git", "remote", "get-url", "origin"],
             cwd=project_root,
@@ -195,15 +196,40 @@ def get_git_info(project_root: Path) -> tuple[str, str, str]:
             timeout=5
         )
 
-        if result.returncode != 0:
-            return ("", "", "")
+        if result.returncode == 0:
+            remote_name = "origin"
+            remote_url = result.stdout.strip()
+        else:
+            # List all remotes and use the first one
+            result = subprocess.run(
+                ["git", "remote"],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                print("Warning: No git remotes found; edit links will be omitted")
+                return ("", "", "")
 
-        remote_url = result.stdout.strip()
+            remote_name = result.stdout.strip().splitlines()[0]
+            result = subprocess.run(
+                ["git", "remote", "get-url", remote_name],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode != 0:
+                print(f"Warning: Could not get URL for remote '{remote_name}'; edit links will be omitted")
+                return ("", "", "")
+            remote_url = result.stdout.strip()
 
         # Parse git@bbgithub.dev.bloomberg.com:org/repo.git or similar
         # Matches both SSH and HTTPS formats
         match = re.search(r'[:/]([^/]+)/([^/]+?)(?:\.git)?$', remote_url)
         if not match:
+            print(f"Warning: Could not parse remote URL '{remote_url}'; edit links will be omitted")
             return ("", "", "")
 
         org = match.group(1)
@@ -221,7 +247,11 @@ def get_git_info(project_root: Path) -> tuple[str, str, str]:
         branch = result.stdout.strip() if result.returncode == 0 else "main"
 
         return (org, repo, branch)
-    except Exception:
+    except FileNotFoundError:
+        print("Warning: 'git' not found on PATH; edit links will be omitted")
+        return ("", "", "")
+    except Exception as e:
+        print(f"Warning: Could not get git info ({e}); edit links will be omitted")
         return ("", "", "")
 
 
