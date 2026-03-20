@@ -4,11 +4,28 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }}</title>
+  <link rel="icon" type="image/png" href="{{ favicon_path }}">
   <link rel="stylesheet" href="{{ css_path }}">
 </head>
 <body>
   <div class="container">
-    <h1>{{ title }}</h1>
+    <!-- Breadcrumb navigation -->
+    <h1 class="breadcrumbs">
+      {% for crumb in breadcrumbs %}
+      <a href="{{ crumb.url }}" class="breadcrumb-link" target="_self">{{ crumb.name }}</a>
+      <span class="breadcrumb-separator">/</span>
+      {% endfor %}
+      <span class="breadcrumb-current">{{ current_name }}</span>
+    </h1>
+
+    {% if children %}
+    <!-- Child directories navigation -->
+    <div class="children-nav">
+      {% for child in children %}
+      <a href="{{ child.url }}" class="child-link" target="_self">{{ child.name }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     {% if ungrouped_links %}
     <!-- Ungrouped links -->

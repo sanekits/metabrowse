@@ -53,8 +53,18 @@ class Transformer:
 
     def _transform_link(self, link: Link) -> HTMLLink:
         """Transform a Link to HTMLLink with target generation."""
-        # Use explicit target if provided, otherwise generate from URL
-        target = link.target if link.target else self.generate_target(link.url)
+        # Determine if this is an external (payload) or internal (navigation) link
+        is_external = link.url.startswith('http://') or link.url.startswith('https://')
+
+        # Use explicit target if provided
+        if link.target:
+            target = link.target
+        elif is_external:
+            # External links get hash-based targets for tab reuse
+            target = self.generate_target(link.url)
+        else:
+            # Internal navigation links stay in the same tab
+            target = "_self"
 
         # Use provided text or default to URL
         text = link.text if link.text else link.url

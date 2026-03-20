@@ -4,9 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Metabrowse is a markdown-to-HTML static site generator designed for teaching materials. It converts README.md files in `text/` to HTML in `docs/` with two key features:
+Metabrowse is a markdown-to-HTML static site generator designed for teaching materials. It converts README.md files in `text/` to HTML in `docs/` with these key features:
 1. **Collapsible link groups** - organize links into expandable sections
-2. **Browser tab reuse** - each unique URL gets a deterministic hash-based target attribute so clicking the same link reuses the same browser tab
+2. **Smart tab behavior** - distinguishes between navigation and content:
+   - External URLs (http/https) get deterministic hash-based targets for tab reuse
+   - Internal navigation links stay in the same tab (target="_self")
+3. **Multi-level hierarchy** - supports unlimited directory nesting (e.g., `text/course/topic/subtopic/README.md`)
+4. **Clickable breadcrumb navigation** - displays full path with each segment clickable
+   - Example: "Metabrowse / / Calcrt / Basics" where "Metabrowse /" and "Calcrt" are links
+   - Current page shown in bold, not clickable
+5. **Auto-generated child navigation** - automatically detects and displays child directories with README.md files
+   - Displayed as horizontal buttons with wrapping support
+   - Sorted alphabetically, directory names formatted with title case
+6. **Favicon support** - automatically copies `text/favicon.png` to `docs/` and links it in all pages
 
 ## Build Commands
 
@@ -47,25 +57,27 @@ Key classes:
 ### 2. Transformer (`transformer.py`)
 - Converts parsed data to HTML-ready structures
 - **Critical feature**: Generates deterministic target names using SHA256 hash (first 8 chars)
-  - Same URL always gets same target → enables tab reuse
-  - Explicit `{target="..."}` attributes override the hash
+  - External URLs (http/https) get hash-based targets → enables tab reuse
+  - Internal/relative URLs get `target="_self"` → metabrowse navigation stays in same tab
+  - Explicit `{target="..."}` attributes override both behaviors
 - Returns `HTMLDocument` with title, ungrouped_links, and groups
 
-Key method: `generate_target(url)` - creates hash-based target for tab reuse
+Key method: `generate_target(url)` - creates hash-based target for external URLs
 
 ### 3. Generator (`generator.py`)
 - Uses Jinja2 templates to render final HTML
 - Template location: `templates/index.html`
-- Copies static assets (CSS) to docs/
+- Copies static assets (CSS, favicon.png) to docs/
 - Creates `.nojekyll` file for GitHub Pages compatibility
-- Calculates relative CSS paths for nested directories
+- Calculates relative CSS and favicon paths for nested directories
 
 ### 4. Build Script (`build.py`)
 - Orchestrates the pipeline
-- Walks `text/` directory tree to find all README.md files
-- Mirrors directory structure: `text/foo/README.md` → `docs/foo/index.html`
-- Generates page titles from directory names
-- Calculates relative CSS paths based on nesting depth
+- Walks `text/` directory tree to find all README.md files (unlimited depth)
+- Mirrors directory structure: `text/foo/bar/README.md` → `docs/foo/bar/index.html`
+- Generates clickable breadcrumb navigation via `get_breadcrumbs_from_path()`
+- Calculates relative CSS and favicon paths based on nesting depth
+- Auto-detects child directories containing README.md files via `find_child_directories()`
 
 ## Directory Structure
 
@@ -73,8 +85,10 @@ Key method: `generate_target(url)` - creates hash-based target for tab reuse
 metabrowse/
 ├── text/              # Source markdown files (input)
 │   ├── README.md      # Root index
-│   └── <course>/
-│       └── README.md  # Course-specific links
+│   ├── <course>/
+│   │   └── README.md  # Course-specific links
+│   └── <course>/<topic>/
+│       └── README.md  # Nested topic links (unlimited depth supported)
 ├── docs/              # Generated HTML (output, GitHub Pages)
 ├── templates/         # Jinja2 templates
 │   ├── index.html     # Main template
@@ -86,6 +100,8 @@ metabrowse/
 ```
 
 ## Markdown Syntax for text/ Files
+
+**Important**: Child directories are automatically detected and displayed - you do NOT need to manually add links to child README.md files in the parent README.md.
 
 **Groups** (collapsible sections):
 ```markdown
@@ -104,15 +120,32 @@ metabrowse/
 
 **Group detection rule**: A line starting with `- ` that contains no URL is treated as a group header. Links indented with more spaces than the group header become children of that group.
 
+**Child directory auto-linking**: When a directory contains subdirectories with README.md files (e.g., `text/calcrt/` contains `text/calcrt/basics/README.md`), the subdirectories are automatically displayed as horizontal navigation buttons. Directory names are formatted with title case (underscores and hyphens converted to spaces).
+
 ## Key Implementation Details
 
-1. **Target generation**: The transformer uses `hashlib.sha256(url.encode()).hexdigest()[:8]` to create deterministic 8-character target names. This is the core feature enabling tab reuse.
+1. **Target generation**: The transformer distinguishes between navigation and payload links:
+   - **External URLs** (starting with http:// or https://): Use `hashlib.sha256(url.encode()).hexdigest()[:8]` for deterministic 8-character targets (enables tab reuse)
+   - **Internal URLs** (relative paths): Use `target="_self"` to keep navigation in the same tab
+   - **Explicit targets**: User-specified `{target="..."}` attributes override both behaviors
 
 2. **Indentation handling**: The parser tracks indent levels (spaces before content) to determine group membership. Children must have more spaces than their parent group header.
 
-3. **CSS path calculation**: `build.py:calculate_css_path()` computes relative paths using `../` based on directory depth to ensure CSS loads correctly at all nesting levels.
+3. **Path calculations**: Multiple functions compute relative paths based on directory depth:
+   - `calculate_css_path()`: Relative path to style.css
+   - `calculate_favicon_path()`: Relative path to favicon.png
+   - Both use `../` multiplied by nesting depth
 
-4. **HTML rendering**: Uses `<details>` and `<summary>` elements for collapsible groups (no JavaScript needed).
+4. **Breadcrumb generation**: `get_breadcrumbs_from_path()` creates clickable navigation:
+   - Returns tuple of (breadcrumbs_list, current_page_name)
+   - Each breadcrumb has 'name' and 'url' keys with relative paths
+   - Root always accessible from any depth via calculated `../` paths
+
+5. **HTML rendering**: Uses `<details>` and `<summary>` elements for collapsible groups (no JavaScript needed). Breadcrumbs rendered in an `<h1>` tag for proper semantic structure and accessibility.
+
+6. **Child directory auto-detection**: `find_child_directories()` scans for subdirectories containing README.md files. Children are sorted alphabetically and displayed as horizontal buttons using flexbox with wrapping.
+
+7. **Favicon handling**: If `text/favicon.png` exists, it's copied to `docs/favicon.png` during build and linked with appropriate relative paths in all generated HTML files.
 
 ## Development Workflow
 

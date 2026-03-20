@@ -21,7 +21,7 @@ class HTMLGenerator:
         self.output_dir = output_dir
         self.env = Environment(loader=FileSystemLoader(str(template_dir)))
 
-    def generate_html(self, html_doc: HTMLDocument, output_path: Path, css_relative_path: str):
+    def generate_html(self, html_doc: HTMLDocument, output_path: Path, css_relative_path: str, favicon_relative_path: str, breadcrumbs: list, current_name: str, children: list = None):
         """
         Generate an HTML file from an HTMLDocument.
 
@@ -29,14 +29,25 @@ class HTMLGenerator:
             html_doc: The HTML-ready document structure
             output_path: Path where the HTML file should be written
             css_relative_path: Relative path to the CSS file from the HTML file
+            favicon_relative_path: Relative path to the favicon.png file from the HTML file
+            breadcrumbs: List of breadcrumb dicts with 'name' and 'url' keys
+            current_name: Name of the current page (last breadcrumb, not a link)
+            children: List of child directory dicts with 'name' and 'url' keys
         """
+        if children is None:
+            children = []
+
         template = self.env.get_template('index.html')
 
         html_content = template.render(
             title=html_doc.title,
             ungrouped_links=html_doc.ungrouped_links,
             groups=html_doc.groups,
-            css_path=css_relative_path
+            css_path=css_relative_path,
+            favicon_path=favicon_relative_path,
+            breadcrumbs=breadcrumbs,
+            current_name=current_name,
+            children=children
         )
 
         # Ensure the output directory exists
@@ -46,7 +57,7 @@ class HTMLGenerator:
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
 
-    def copy_static_assets(self):
+    def copy_static_assets(self, project_root: Path = None):
         """Copy CSS and other static assets to the output directory."""
         css_source = self.template_dir / 'style.css'
         css_dest = self.output_dir / 'style.css'
@@ -57,6 +68,13 @@ class HTMLGenerator:
         # Copy CSS file
         if css_source.exists():
             shutil.copy2(css_source, css_dest)
+
+        # Copy favicon if it exists in text/
+        if project_root:
+            favicon_source = project_root / 'text' / 'favicon.png'
+            if favicon_source.exists():
+                favicon_dest = self.output_dir / 'favicon.png'
+                shutil.copy2(favicon_source, favicon_dest)
 
         # Create .nojekyll file to disable Jekyll on GitHub Pages
         nojekyll_file = self.output_dir / '.nojekyll'
