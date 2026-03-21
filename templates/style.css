@@ -127,6 +127,9 @@ h1.breadcrumbs {
   margin-bottom: 2px;
   padding-left: 13px;
   position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
 }
 
 .links li::before {
@@ -153,8 +156,7 @@ h1.breadcrumbs {
   font-size: 0.57em;
   color: #7f8c8d;
   font-style: italic;
-  margin-top: 1px;
-  margin-left: 13px;
+  margin-left: 6px;
 }
 
 /* Groups */
@@ -207,6 +209,9 @@ h1.breadcrumbs {
   margin-bottom: 2px;
   padding-left: 13px;
   position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
 }
 
 .group-links li::before {

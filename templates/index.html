@@ -43,7 +43,7 @@
           <a href="{{ link.url }}" target="{{ link.target }}">{{ link.text }}</a>
         {% endif %}
         {% if link.comment %}
-        <div class="link-comment">ℹ {{ link.comment }}</div>
+        <span class="link-comment">ℹ {{ link.comment }}</span>
         {% endif %}
       </li>
       {% endfor %}
@@ -69,7 +69,7 @@
             <a href="{{ link.url }}" target="{{ link.target }}">{{ link.text }}</a>
           {% endif %}
           {% if link.comment %}
-          <div class="link-comment">ℹ {{ link.comment }}</div>
+          <span class="link-comment">ℹ {{ link.comment }}</span>
           {% endif %}
         </li>
         {% endfor %}
