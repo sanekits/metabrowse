@@ -26,11 +26,11 @@ body {
 /* Header bar with breadcrumbs and edit link */
 .header-bar {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 13px;
+  gap: 4px 10px;
   margin-bottom: 8px;
-  padding: 6px 10px;
+  padding: 4px 10px;
   background-color: #f8f9fa;
   border-radius: 4px;
 }
@@ -42,7 +42,6 @@ h1.breadcrumbs {
   color: #2c3e50;
   font-weight: normal;
   border-bottom: none;
-  flex: 1;
 }
 
 .breadcrumb-link {
@@ -80,6 +79,7 @@ h1.breadcrumbs {
   transition: background-color 0.2s;
   white-space: nowrap;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .edit-link:hover {
