@@ -285,10 +285,14 @@ def generate_edit_url(readme_path: Path, text_root: Path, org: str, repo: str, b
 def build():
     """Main build function."""
     # Setup paths
-    project_root = Path(__file__).parent
-    text_root = project_root / "text"
-    docs_root = project_root / "docs"
-    template_dir = project_root / "templates"
+    # Code directory (where build.py and templates live)
+    code_root = Path(__file__).parent
+    template_dir = code_root / "templates"
+
+    # Content directory (current working directory - where text/ and docs/ live)
+    content_root = Path.cwd()
+    text_root = content_root / "text"
+    docs_root = content_root / "docs"
 
     # Initialize components
     parser = MarkdownParser()
@@ -296,13 +300,13 @@ def build():
     generator = HTMLGenerator(template_dir, docs_root)
 
     # Get git repository information for edit links
-    org, repo, branch = get_git_info(project_root)
+    org, repo, branch = get_git_info(content_root)
     if org and repo:
         print(f"Git repository: {org}/{repo} (branch: {branch})")
 
     # Copy static assets first
     print("Copying static assets...")
-    generator.copy_static_assets(project_root)
+    generator.copy_static_assets(code_root)
 
     # Find all README.md files in text/ directory
     readme_files = list(text_root.rglob("README.md"))

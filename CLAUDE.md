@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Metabrowse is a markdown-to-HTML static site generator designed for teaching materials. It converts README.md files in `text/` to HTML in `docs/` with these key features:
+Metabrowse is a markdown-to-HTML static site generator designed for teaching materials.
+
+**Architecture**: Code and content are separated into different repositories:
+- **Code repository** (this repo): Build pipeline, parsers, transformers, templates
+- **Content repositories**: User's `text/` markdown files and generated `docs/` HTML
+
+The build script (`build-metabrowse.sh`) is run from a content directory and invokes the build pipeline to convert README.md files in `text/` to HTML in `docs/` with these key features:
 1. **Collapsible link groups** - organize links into expandable sections
 2. **Smart tab behavior** - distinguishes between navigation and content:
    - External URLs (http/https) get deterministic hash-based targets for tab reuse
@@ -26,20 +32,29 @@ Metabrowse is a markdown-to-HTML static site generator designed for teaching mat
 
 ## Build Commands
 
+**User workflow** (from content directory):
 ```bash
-# Build the entire site
-make build
-# or directly:
-~/.local/bin/python3 build.py
+cd /path/to/my-metabrowse-links
+/path/to/metabrowse/build-metabrowse.sh
+```
 
-# Clean generated files
-make clean
+**Developer workflow** (testing changes to build pipeline):
+```bash
+# From a content directory
+cd /path/to/test-content
+~/.local/bin/python3 /path/to/metabrowse/build.py
+```
 
-# Install dependencies
+**Dependencies:**
+```bash
 ~/.local/bin/python3 -m pip install -r requirements.txt
 ```
 
-Note: This project uses `~/.local/bin/python3` as the Python interpreter path.
+**Environment variables:**
+- `METABROWSE_CODE_DIR`: Override location of code repository (default: directory containing build-metabrowse.sh)
+- `METABROWSE_PYTHON`: Override Python interpreter (default: `~/.local/bin/python3`)
+
+Note: This project uses `~/.local/bin/python3` as the default Python interpreter path.
 
 ## Architecture
 
@@ -81,6 +96,8 @@ Key method: `generate_target(url)` - creates hash-based target for external URLs
 
 ### 4. Build Script (`build.py`)
 - Orchestrates the pipeline
+- **Uses current working directory as content root** (text/ and docs/ locations)
+- Code location (templates, modules) determined from script's parent directory
 - Walks `text/` directory tree to find all README.md files (unlimited depth)
 - Mirrors directory structure: `text/foo/bar/README.md` → `docs/foo/bar/index.html`
 - Generates clickable breadcrumb navigation via `get_breadcrumbs_from_path()`
@@ -88,24 +105,45 @@ Key method: `generate_target(url)` - creates hash-based target for external URLs
 - Auto-detects child directories containing README.md files via `find_child_directories()`
 - Extracts git repository info via `get_git_info()` and generates BBGitHub edit URLs via `generate_edit_url()`
 
+### 5. Build Wrapper (`build-metabrowse.sh`)
+- User-facing entry point for building content
+- **Follows bashics coding standards** (see `~/.local/bin/bashics/docs/`)
+- Run from content directory (containing text/ and docs/)
+- Validates content directory structure
+- Locates metabrowse code repository
+- Invokes build.py with proper environment
+- Provides helpful error messages for common issues
+
 ## Directory Structure
 
+**Code repository** (this repo):
 ```
 metabrowse/
-├── text/              # Source markdown files (input)
-│   ├── README.md      # Root index
+├── templates/            # Jinja2 templates
+│   ├── index.html        # Main template
+│   └── style.css         # Shared stylesheet
+├── parser.py             # Stage 1: Extract links/groups
+├── transformer.py        # Stage 2: Generate targets, prepare HTML data
+├── generator.py          # Stage 3: Render templates
+├── build.py              # Main orchestrator
+├── build-metabrowse.sh   # User-facing build wrapper
+└── requirements.txt      # Python dependencies
+```
+
+**Content repository** (user's separate repo):
+```
+my-metabrowse-links/
+├── text/                 # Source markdown files (input)
+│   ├── README.md         # Root index
 │   ├── <course>/
-│   │   └── README.md  # Course-specific links
+│   │   └── README.md     # Course-specific links
 │   └── <course>/<topic>/
-│       └── README.md  # Nested topic links (unlimited depth supported)
-├── docs/              # Generated HTML (output, GitHub Pages)
-├── templates/         # Jinja2 templates
-│   ├── index.html     # Main template
-│   └── style.css      # Shared stylesheet
-├── parser.py          # Stage 1: Extract links/groups
-├── transformer.py     # Stage 2: Generate targets, prepare HTML data
-├── generator.py       # Stage 3: Render templates
-└── build.py           # Main orchestrator
+│       └── README.md     # Nested topic links (unlimited depth)
+└── docs/                 # Generated HTML (output, GitHub Pages)
+    ├── index.html
+    ├── style.css         # Copied from templates/
+    ├── favicon.png       # Copied from text/ if present
+    └── .nojekyll         # GitHub Pages marker
 ```
 
 ## Markdown Syntax for text/ Files

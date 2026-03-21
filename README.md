@@ -4,30 +4,47 @@
 
 A markdown-to-HTML static site generator for teaching materials with collapsible link groups and browser tab reuse.
 
+## Architecture
+
+Metabrowse separates **code** (this repository) from **content** (your link collections):
+
+- **Code repository** (this repo): Build scripts, parsers, templates
+- **Content repository** (separate): Your `text/` markdown files and generated `docs/` HTML
+
+This separation allows:
+- Multiple users to maintain their own link collections
+- Code updates without touching content
+- Content updates without needing build tool changes
+
 ## Quick Start
 
-```bash
-# Build the site
-make build
+### For Users (Working with Content)
 
-# Clean generated files
-make clean
-```
+1. Create or clone your content repository:
+   ```bash
+   mkdir my-metabrowse-links
+   cd my-metabrowse-links
+   mkdir text
+   # Create your README.md files in text/
+   ```
 
-## Project Structure
+2. Build your site:
+   ```bash
+   /path/to/metabrowse/build-metabrowse.sh
+   ```
+
+### For Developers (Working with Code)
+
+This repository contains the build pipeline:
 
 ```
 metabrowse/
-├── text/              # Source markdown files
-│   ├── README.md      # Root index
-│   └── <course>/      # Course directories
-│       └── README.md  # Course links and resources
-├── docs/              # Generated HTML (GitHub Pages ready)
-├── templates/         # Jinja2 templates and CSS
-├── build.py           # Main build script
-├── parser.py          # Markdown parser
-├── transformer.py     # Data transformer
-└── generator.py       # HTML generator
+├── templates/          # Jinja2 templates and CSS
+├── build.py            # Main build orchestrator
+├── parser.py           # Markdown parser
+├── transformer.py      # Data transformer
+├── generator.py        # HTML generator
+└── build-metabrowse.sh # User-facing build script
 ```
 
 ## Markdown Syntax
@@ -63,14 +80,23 @@ Groups are created automatically when a line starts with `- ` but contains no UR
 
 ## Building
 
-The build script processes all `README.md` files in the `text/` directory and generates corresponding `index.html` files in `docs/` with the same directory structure.
+The `build-metabrowse.sh` script processes all `README.md` files in the content repository's `text/` directory and generates corresponding `index.html` files in `docs/`.
 
+**Usage:**
 ```bash
-# Using make
-make build
+# Run from your content directory
+cd my-metabrowse-links
+/path/to/metabrowse/build-metabrowse.sh
+```
 
-# Or directly with Python
-~/.local/bin/python3 build.py
+**Environment Variables:**
+- `METABROWSE_CODE_DIR`: Override code repository location (default: script directory)
+- `METABROWSE_PYTHON`: Override Python interpreter (default: `~/.local/bin/python3`)
+
+**Direct Python invocation** (for development):
+```bash
+# Must be in content directory with text/ and docs/
+~/.local/bin/python3 /path/to/metabrowse/build.py
 ```
 
 ## Requirements
