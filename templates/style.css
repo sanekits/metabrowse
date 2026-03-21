@@ -7,10 +7,10 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.6;
+  line-height: 1.3;
   color: #333;
   background-color: #f5f5f5;
-  padding: 13px;
+  padding: 8px;
   font-size: 0.9em;
 }
 
@@ -18,7 +18,7 @@ body {
   max-width: 900px;
   margin: 0 auto;
   background-color: white;
-  padding: 20px;
+  padding: 12px;
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -29,8 +29,8 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 13px;
-  margin-bottom: 13px;
-  padding: 10px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
   background-color: #f8f9fa;
   border-radius: 4px;
 }
@@ -91,8 +91,8 @@ h1.breadcrumbs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 15px;
-  padding: 8px;
+  margin-bottom: 8px;
+  padding: 5px 8px;
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
@@ -100,7 +100,7 @@ h1.breadcrumbs {
 
 .child-link {
   display: inline-block;
-  padding: 5px 10px;
+  padding: 3px 10px;
   background-color: #3498db;
   color: white;
   text-decoration: none;
@@ -120,11 +120,11 @@ h1.breadcrumbs {
 /* Links */
 .links {
   list-style: none;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
 }
 
 .links li {
-  margin-bottom: 5px;
+  margin-bottom: 2px;
   padding-left: 13px;
   position: relative;
 }
@@ -153,13 +153,13 @@ h1.breadcrumbs {
   font-size: 0.57em;
   color: #7f8c8d;
   font-style: italic;
-  margin-top: 3px;
+  margin-top: 1px;
   margin-left: 13px;
 }
 
 /* Groups */
 .group {
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   overflow: hidden;
@@ -167,7 +167,7 @@ h1.breadcrumbs {
 
 .group summary {
   background-color: #f8f9fa;
-  padding: 6px 13px;
+  padding: 4px 13px;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
@@ -190,7 +190,7 @@ h1.breadcrumbs {
   color: #7f8c8d;
   font-style: italic;
   font-weight: normal;
-  margin-top: 3px;
+  margin-top: 1px;
 }
 
 .group[open] summary .group-comment {
@@ -199,12 +199,12 @@ h1.breadcrumbs {
 
 .group-links {
   list-style: none;
-  padding: 6px 13px;
+  padding: 4px 13px 6px 13px;
   background-color: #fafafa;
 }
 
 .group-links li {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   padding-left: 13px;
   position: relative;
 }
