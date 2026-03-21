@@ -58,13 +58,10 @@ EOF
         cut -c 13- <<'EOF'
             # Page Title
 
-            Edit this file to add your links and organize them into groups.
-
-            ## Sample Links
-
-            - https://example.com
+            - https://example.com # Raw link with comment
             - Example Site https://example.org
             - [Markdown Link](https://wikipedia.org)
+            - [Markdown Link](https://wikipedia.org) # with a comment? 🌼
 
             ## Sample Groups
 
