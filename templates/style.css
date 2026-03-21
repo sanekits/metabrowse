@@ -74,7 +74,7 @@ h1.breadcrumbs {
   color: white;
   text-decoration: none;
   border-radius: 3px;
-  font-size: 0.57em;
+  font-size: 0.7em;
   font-weight: 500;
   transition: background-color 0.2s;
   white-space: nowrap;
@@ -101,8 +101,8 @@ h1.breadcrumbs {
 .child-link {
   display: inline-block;
   padding: 3px 10px;
-  background-color: #3498db;
-  color: white;
+  background-color: #34db62;
+  color: black;
   text-decoration: none;
   border-radius: 3px;
   font-weight: 500;
@@ -112,7 +112,7 @@ h1.breadcrumbs {
 }
 
 .child-link:hover {
-  background-color: #2980b9;
+  background-color: #2bc454;
   transform: translateY(-1px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -153,10 +153,10 @@ h1.breadcrumbs {
 }
 
 .link-comment {
-  font-size: 0.57em;
+  font-size: 0.85em;
   color: #7f8c8d;
   font-style: italic;
-  margin-left: 6px;
+  margin-left: 12px;
 }
 
 /* Groups */
@@ -168,6 +168,9 @@ h1.breadcrumbs {
 }
 
 .group summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   background-color: #f8f9fa;
   padding: 4px 13px;
   font-weight: 600;
@@ -183,20 +186,20 @@ h1.breadcrumbs {
 }
 
 .group[open] summary {
-  background-color: #3498db;
-  color: white;
+  background-color: #34db62;
+  color: black;
 }
 
 .group-comment {
-  font-size: 0.57em;
+  font-size: 0.85em;
   color: #7f8c8d;
   font-style: italic;
   font-weight: normal;
-  margin-top: 1px;
+  margin-left: 6px;
 }
 
 .group[open] summary .group-comment {
-  color: #ecf0f1;
+  color: #444;
 }
 
 .group-links {
