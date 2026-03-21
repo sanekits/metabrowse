@@ -244,16 +244,7 @@ h1.breadcrumbs {
     padding: 13px;
   }
 
-  .header-bar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   h1.breadcrumbs {
     font-size: 0.8em;
-  }
-
-  .edit-link {
-    align-self: flex-end;
   }
 }
