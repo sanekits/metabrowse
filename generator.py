@@ -56,7 +56,7 @@ class HTMLGenerator:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the HTML file
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
             f.write(html_content)
 
     def copy_static_assets(self, project_root: Path = None):
