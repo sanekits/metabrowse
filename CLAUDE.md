@@ -32,6 +32,13 @@ The build script (`build-metabrowse.sh`) is run from a content directory and inv
 
 ## Build Commands
 
+**Content setup** (creating directories with templates):
+```bash
+cd /path/to/my-metabrowse-links
+/path/to/metabrowse/metabrowse-wiz.sh mkdir python-basics
+/path/to/metabrowse/metabrowse-wiz.sh mktree math/{algebra,geometry} science/physics
+```
+
 **User workflow** (from content directory):
 ```bash
 cd /path/to/my-metabrowse-links
@@ -114,6 +121,21 @@ Key method: `generate_target(url)` - creates hash-based target for external URLs
 - Invokes build.py with proper environment
 - Provides helpful error messages for common issues
 
+### 6. Content Wizard (`metabrowse-wiz.sh`)
+- User-facing wizard for creating content directories with templates
+- **Follows bashics coding standards** (see `~/.local/bin/bashics/docs/`)
+- Run from content directory (containing text/)
+- Commands:
+  - `mkdir NAME`: Create single directory with template README.md
+  - `mktree PATTERN [...]`: Create multiple directories using brace expansion
+- Template README.md includes:
+  - Sample links in various formats (plain URL, markdown, with title)
+  - Example collapsible groups with comments
+  - Usage notes explaining metabrowse syntax
+- Supports nested brace expansion: `courses/{intro,advanced}/{week1,week2}`
+- Automatically creates parent directories as needed
+- Skips directories that already contain README.md files
+
 ## Directory Structure
 
 **Code repository** (this repo):
@@ -127,6 +149,7 @@ metabrowse/
 ├── generator.py          # Stage 3: Render templates
 ├── build.py              # Main orchestrator
 ├── build-metabrowse.sh   # User-facing build wrapper
+├── metabrowse-wiz.sh     # Content wizard for creating directories
 └── requirements.txt      # Python dependencies
 ```
 
@@ -211,6 +234,11 @@ When modifying the pipeline:
 4. Build script changes affect file discovery or path handling
 
 After changes, run `make build` to regenerate all HTML files.
+
+**Shell script coding standards:**
+- All shell scripts MUST pass the `check-bash` skill from `~/.local/bin/bashics`
+- Run `~/.local/bin/bashics/check-bash script-name.sh` before committing
+- See `~/.local/bin/bashics/docs/` for detailed coding standards
 
 ## GitHub Pages Deployment
 
