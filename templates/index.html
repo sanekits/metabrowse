@@ -44,7 +44,7 @@
           {{ link.raw_html|safe }}
         {% else %}
           {% if link.url_hash %}
-          <img src="" alt="" class="link-favicon" data-link-url="{{ link.url }}" data-url-hash="{{ link.url_hash }}" loading="lazy">
+          <img src="" alt="" class="link-favicon" data-link-url="{{ link.url }}" data-url-hash="{{ link.url_hash }}">
           {% endif %}
           <a href="{{ link.url }}" target="{{ link.target }}">{{ link.text }}</a>
         {% endif %}
@@ -74,7 +74,7 @@
             {{ link.raw_html|safe }}
           {% else %}
             {% if link.url_hash %}
-            <img src="" alt="" class="link-favicon" data-link-url="{{ link.url }}" data-url-hash="{{ link.url_hash }}" loading="lazy">
+            <img src="" alt="" class="link-favicon" data-link-url="{{ link.url }}" data-url-hash="{{ link.url_hash }}">
             {% endif %}
             <a href="{{ link.url }}" target="{{ link.target }}">{{ link.text }}</a>
           {% endif %}
@@ -147,11 +147,23 @@
     } catch (e) {}
   }
 
+  // Try DuckDuckGo favicon service as final fallback
+  function tryDuckDuckGo(imgElement, domain) {
+    var ddgUrl = 'https://icons.duckduckgo.com/ip3/' + domain + '.ico';
+    imgElement.onerror = function() {
+      imgElement.style.display = 'none';
+      markFailed(domain);
+    };
+    imgElement.onload = function() {
+      cachePath(domain, 'ddg');
+    };
+    imgElement.src = ddgUrl;
+  }
+
   // Try favicon paths in sequence using img onerror chaining
   function tryPaths(imgElement, origin, domain, index) {
     if (index >= PATHS_TO_TRY.length) {
-      imgElement.style.display = 'none';
-      markFailed(domain);
+      tryDuckDuckGo(imgElement, domain);
       return;
     }
     var path = PATHS_TO_TRY[index];
@@ -189,7 +201,9 @@
       }
       if (cached) {
         img.onerror = function() { img.style.display = 'none'; };
-        img.src = origin + cached;
+        img.src = (cached === 'ddg')
+          ? 'https://icons.duckduckgo.com/ip3/' + domain + '.ico'
+          : origin + cached;
         return;
       }
 
