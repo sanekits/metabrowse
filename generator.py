@@ -46,6 +46,7 @@ class HTMLGenerator:
             groups=html_doc.groups,
             css_path=css_relative_path,
             favicon_path=favicon_relative_path,
+            favicon_ico_path=favicon_relative_path.replace('favicon.png', 'favicon.ico'),
             breadcrumbs=breadcrumbs,
             current_name=current_name,
             children=children,
@@ -70,6 +71,12 @@ class HTMLGenerator:
         # Copy CSS file
         if css_source.exists():
             shutil.copy2(css_source, css_dest)
+
+        # Copy favicon.ico if it exists in templates/
+        ico_source = self.template_dir / 'favicon.ico'
+        if ico_source.exists():
+            ico_dest = self.output_dir / 'favicon.ico'
+            shutil.copy2(ico_source, ico_dest)
 
         # Copy favicon if it exists in text/
         if project_root:
