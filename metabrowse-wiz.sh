@@ -31,7 +31,8 @@ die() {
               -h, --help              Show this help message
 
             EXAMPLES:
-              # Create a single directory with template
+              # Create a single directory with template (relative to $PWD)
+              cd text
               metabrowse-wiz.sh mkdir python-basics
 
               # Create multiple directories at once
@@ -48,23 +49,19 @@ die() {
               demonstrating metabrowse syntax. Edit these templates to add your content.
 
             NOTE:
-              Run this script from your metabrowse content directory (containing text/).
-              All directories are created under text/.
+              All directories are created relative to the current working directory.
 EOF
         builtin exit 2
     }
 
     get_template_content() {
-        cut -c 12- <<'EOF'
+        cut -c 13- <<'EOF'
             # Page Title
 
-            Edit this file to add your links and organize them into groups.
-
-            ## Sample Links
-
-            - https://example.com
+            - https://example.com # Raw link with comment
             - Example Site https://example.org
             - [Markdown Link](https://wikipedia.org)
+            - [Markdown Link](https://wikipedia.org) # with a comment? 🌼
 
             ## Sample Groups
 
@@ -92,15 +89,9 @@ EOF
 EOF
     }
 
-    validate_content_dir() {
-        if [[ ! -d "text" ]]; then
-            die "No text/ directory found. Please run from a metabrowse content directory or create text/ first."
-        fi
-    }
-
     create_directory_with_template() {
         local dir_path="$1"
-        local full_path="text/${dir_path}"
+        local full_path="${dir_path}"
 
         # Create the directory with parents if needed
         if ! mkdir -p "${full_path}"; then
@@ -122,8 +113,6 @@ EOF
             die "mktree requires at least one PATTERN argument (use -h for help)"
         fi
 
-        validate_content_dir
-
         # Process each pattern
         for pattern in "$@"; do
             # Use bash to expand braces
@@ -141,7 +130,7 @@ EOF
 
         echo "" >&2
         echo "==> Template creation complete!" >&2
-        echo "    Edit the README.md files in text/ to add your links." >&2
+        echo "    Edit the README.md files to add your links." >&2
     }
 
     cmd_mkdir() {
