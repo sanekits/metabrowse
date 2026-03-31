@@ -7,8 +7,6 @@ and generates corresponding index.html files in the docs/ directory.
 """
 
 import json
-import re
-import subprocess
 from pathlib import Path
 from parser import MarkdownParser
 from transformer import Transformer
@@ -176,158 +174,81 @@ def find_child_directories(readme_path: Path) -> list[dict[str, str]]:
     return children
 
 
-def get_git_info(project_root: Path) -> tuple[str, str, str, str]:
+def read_edit_base_url(content_root: Path) -> str:
     """
-    Extract git repository information including host.
+    Read the edit base URL from .metabrowse.conf config file.
 
     Args:
-        project_root: Path to the project root directory
+        content_root: Path to the content repository root
 
     Returns:
-        Tuple of (host, org, repo, branch) or empty strings if git info unavailable
+        Base URL for edit links
+
+    Raises:
+        SystemExit: If config file is missing or EDIT_BASE_URL is not set
     """
+    config_file = content_root / ".metabrowse.conf"
+
+    if not config_file.exists():
+        print(f"ERROR: Required config file not found: {config_file}")
+        print()
+        print("Create .metabrowse.conf in your content repository root with:")
+        print("  EDIT_BASE_URL=https://your-git-host.com/org/repo/blob/main")
+        print()
+        print("Examples:")
+        print("  EDIT_BASE_URL=https://github.com/your-org/your-repo/blob/main")
+        print("  EDIT_BASE_URL=https://gitlab.com/your-org/your-repo/-/blob/main")
+        raise SystemExit(1)
+
     try:
-        # Try "origin" first, fall back to first available remote
-        remote_name = None
-        result = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        with open(config_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('#') or not line:
+                    continue
+                if line.startswith('EDIT_BASE_URL='):
+                    base_url = line.split('=', 1)[1].strip()
+                    if not base_url:
+                        print("ERROR: EDIT_BASE_URL is empty in .metabrowse.conf")
+                        raise SystemExit(1)
+                    # Remove trailing slash if present
+                    base_url = base_url.rstrip('/')
+                    print(f"Edit base URL: {base_url}")
+                    return base_url
 
-        if result.returncode == 0:
-            remote_name = "origin"
-            remote_url = result.stdout.strip()
-        else:
-            # List all remotes and use the first one
-            result = subprocess.run(
-                ["git", "remote"],
-                cwd=project_root,
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode != 0 or not result.stdout.strip():
-                print("Warning: No git remotes found; edit links will be omitted")
-                return ("", "", "", "")
-
-            remote_name = result.stdout.strip().splitlines()[0]
-            result = subprocess.run(
-                ["git", "remote", "get-url", remote_name],
-                cwd=project_root,
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode != 0:
-                print(f"Warning: Could not get URL for remote '{remote_name}'; edit links will be omitted")
-                return ("", "", "", "")
-            remote_url = result.stdout.strip()
-
-        # Extract host from remote URL
-        # For SSH: git@github.com:org/repo.git
-        # For HTTPS: https://github.com/org/repo.git
-        host = ""
-        if remote_url.startswith("https://") or remote_url.startswith("http://"):
-            # HTTPS format
-            host_match = re.search(r'https?://([^/]+)/', remote_url)
-            if host_match:
-                host = host_match.group(1)
-        elif "@" in remote_url:
-            # SSH format: git@host:org/repo.git
-            host_match = re.search(r'@([^:]+):', remote_url)
-            if host_match:
-                host = host_match.group(1)
-        else:
-            # SSH config alias format: alias:org/repo.git
-            alias_match = re.match(r'^([A-Za-z0-9._-]+):', remote_url)
-            if alias_match:
-                alias = alias_match.group(1)
-                try:
-                    ssh_result = subprocess.run(
-                        ["ssh", "-G", alias],
-                        capture_output=True,
-                        text=True,
-                        timeout=5
-                    )
-                    if ssh_result.returncode == 0:
-                        for line in ssh_result.stdout.splitlines():
-                            if line.startswith("hostname "):
-                                host = line.split(" ", 1)[1]
-                                break
-                except (FileNotFoundError, subprocess.TimeoutExpired):
-                    pass
-
-        # Parse org/repo from URL
-        # Matches both SSH and HTTPS formats
-        match = re.search(r'[:/]([^/]+)/([^/]+?)(?:\.git)?$', remote_url)
-        if not match:
-            print(f"Warning: Could not parse remote URL '{remote_url}'; edit links will be omitted")
-            return ("", "", "", "")
-
-        org = match.group(1)
-        repo = match.group(2)
-
-        # Get current branch
-        result = subprocess.run(
-            ["git", "branch", "--show-current"],
-            cwd=project_root,
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-
-        branch = result.stdout.strip() if result.returncode == 0 else "main"
-
-        if not host:
-            print(f"Warning: Could not extract host from remote URL '{remote_url}'; edit links will be omitted")
-            return ("", "", "", "")
-
-        return (host, org, repo, branch)
-    except FileNotFoundError:
-        print("Warning: 'git' not found on PATH; edit links will be omitted")
-        return ("", "", "", "")
+        print(f"ERROR: EDIT_BASE_URL not found in {config_file}")
+        print()
+        print("Add this line to your .metabrowse.conf:")
+        print("  EDIT_BASE_URL=https://your-git-host.com/org/repo/blob/main")
+        raise SystemExit(1)
+    except SystemExit:
+        raise
     except Exception as e:
-        print(f"Warning: Could not get git info ({e}); edit links will be omitted")
-        return ("", "", "", "")
+        print(f"ERROR: Could not read .metabrowse.conf: {e}")
+        raise SystemExit(1)
 
 
-def generate_edit_url(readme_path: Path, text_root: Path, host: str, org: str, repo: str, branch: str) -> str:
+def generate_edit_url(readme_path: Path, text_root: Path, base_url: str) -> str:
     """
-    Generate edit URL for a README.md file in the git repository.
-
-    Supports GitHub, GitLab, and other git hosting services.
+    Generate edit URL for a README.md file using the configured base URL.
 
     Args:
         readme_path: Path to the README.md file
         text_root: Path to the text/ root directory
-        host: Git hosting service domain (e.g., "github.com", "gitlab.com")
-        org: Organization or user name
-        repo: Repository name
-        branch: Git branch name
+        base_url: Base URL from config file (e.g., "https://host.com/org/repo/blob/main")
 
     Returns:
-        URL to edit the file in the git web interface, or empty string if git info unavailable
+        URL to edit the file in the git web interface
     """
-    if not host or not org or not repo or not branch:
-        return ""
-
-    # Calculate relative path from project root
+    # Calculate relative path from content root
     try:
         rel_path = readme_path.relative_to(text_root.parent)
         # Convert Path to forward-slash string for URL
         path_str = str(rel_path).replace('\\', '/')
-
-        # GitLab uses a different URL format with /-/blob/
-        # Most other hosts (GitHub, GitHub Enterprise, etc.) use /blob/
-        if "gitlab" in host.lower():
-            return f"https://{host}/{org}/{repo}/-/blob/{branch}/{path_str}"
-        else:
-            return f"https://{host}/{org}/{repo}/blob/{branch}/{path_str}"
+        return f"{base_url}/{path_str}"
     except ValueError:
-        return ""
+        print(f"ERROR: Could not calculate relative path for {readme_path}")
+        raise SystemExit(1)
 
 
 def build():
@@ -347,10 +268,8 @@ def build():
     transformer = Transformer()
     generator = HTMLGenerator(template_dir, docs_root)
 
-    # Get git repository information for edit links
-    host, org, repo, branch = get_git_info(content_root)
-    if host and org and repo:
-        print(f"Git repository: {host}/{org}/{repo} (branch: {branch})")
+    # Read edit base URL from config file
+    edit_base_url = read_edit_base_url(content_root)
 
     # Copy static assets first
     print("Copying static assets...")
@@ -407,7 +326,7 @@ def build():
         children = find_child_directories(readme_path)
 
         # Generate edit URL
-        edit_url = generate_edit_url(readme_path, text_root, host, org, repo, branch)
+        edit_url = generate_edit_url(readme_path, text_root, edit_base_url)
 
         # Calculate relative path for this page (used in search index)
         try:

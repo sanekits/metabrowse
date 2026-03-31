@@ -1,0 +1,16 @@
+# Metabrowse configuration file
+#
+# Place this file as `.metabrowse.conf` in your content repository root
+# (the directory containing text/ and docs/)
+
+# Base URL for edit links
+# The build will append /text/{path}/README.md to generate edit URLs
+#
+# Examples:
+#   GitHub: https://github.com/your-org/your-repo/blob/main
+#   GitLab: https://gitlab.com/your-org/your-repo/-/blob/main
+#   Gitea: https://gitea.example.com/your-org/your-repo/src/branch/main
+#
+# If this is not set or the file doesn't exist, the build will fail.
+
+EDIT_BASE_URL=https://github.com/your-org/your-repo/blob/main

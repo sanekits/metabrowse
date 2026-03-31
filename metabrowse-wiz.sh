@@ -60,7 +60,7 @@ EOF
             # Title: $title
 
             Group Name
-              - https://bbgithub.dev.bloomberg.com
+              - https://example.com
 
 EOF
     }

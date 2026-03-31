@@ -24,8 +24,8 @@ The build script (`build-metabrowse.sh`) is run from a content directory and inv
    - Sorted alphabetically, directory names formatted with title case
 6. **Favicon support** - automatically copies `text/favicon.png` to `docs/` and links it in all pages
 7. **Edit links** - "Edit" button on every page links to source README.md in the git web interface
-   - Auto-detects repository host, organization, and branch from git remote
-   - Supports GitHub, GitLab, and other git hosting services
+   - Configured via `.metabrowse.conf` file in content repo root
+   - Set `EDIT_BASE_URL=https://your-git-host.com/org/repo/blob/main` to enable
    - Opens in new tab to preserve navigation state
 8. **Inline comments** - add `# comment text` to any link or group for context
    - Displayed as small gray italic text below the link/group
@@ -36,6 +36,23 @@ The build script (`build-metabrowse.sh`) is run from a content directory and inv
    - Toggle between modes with checkbox, or use keyboard shortcuts: `/` for local, `Ctrl+K` for global
    - Search term and mode persist across page navigations via localStorage
    - Clear button (×) appears when search has content
+
+## Configuration
+
+**Edit links setup** (enable "Edit" buttons on pages):
+
+Create `.metabrowse.conf` in your content repository root:
+```bash
+# .metabrowse.conf
+EDIT_BASE_URL=https://github.com/your-org/your-repo/blob/main
+```
+
+Replace the URL with your git hosting service URL pattern. Common examples:
+- **GitHub**: `https://github.com/org/repo/blob/main`
+- **GitLab**: `https://gitlab.com/org/repo/-/blob/main`
+- **Gitea**: `https://gitea.example.com/org/repo/src/branch/main`
+
+The build will append `/text/{path}/README.md` to generate edit URLs.
 
 ## Build Commands
 
@@ -173,6 +190,7 @@ metabrowse/
 **Content repository** (user's separate repo):
 ```
 my-metabrowse-links/
+├── .metabrowse.conf      # Config file with EDIT_BASE_URL
 ├── .github/workflows/
 │   └── build.yml         # GitHub Actions: build + deploy to gh-pages
 ├── text/                 # Source markdown files (input)
@@ -251,10 +269,10 @@ search-index.json
 
 7. **Favicon handling**: If `text/favicon.png` exists, it's copied to `docs/favicon.png` during build and linked with appropriate relative paths in all generated HTML files.
 
-8. **Edit link generation**: `get_git_info()` parses `git remote get-url origin` to extract the git host, organization, repository, and branch. `generate_edit_url()` constructs edit URLs appropriate for the detected git hosting service:
-   - **GitHub/GitHub Enterprise**: `https://{host}/{org}/{repo}/blob/{branch}/text/{path}/README.md`
-   - **GitLab**: `https://{host}/{org}/{repo}/-/blob/{branch}/text/{path}/README.md`
-   Edit links open in new tabs (target="_blank").
+8. **Edit link generation**: `read_edit_base_url()` reads the `EDIT_BASE_URL` from `.metabrowse.conf` in the content repo root. `generate_edit_url()` appends the relative path from the repo root:
+   - Example config: `EDIT_BASE_URL=https://github.com/your-org/your-repo/blob/main`
+   - Generates URLs like: `{EDIT_BASE_URL}/text/{path}/README.md`
+   Edit links open in new tabs (target="_blank"). If no config file exists, the build will fail.
 
 9. **Search index generation**: `build.py` generates `docs/search-index.json` containing all pages' links, groups, children, and breadcrumbs. Each page entry includes path, title, breadcrumbs string, links array (with text, url, group, comment), group names, and child names. The index is loaded lazily by the global search modal on first use.
 
