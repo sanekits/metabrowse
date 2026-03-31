@@ -9,7 +9,7 @@ and generates corresponding index.html files in the docs/ directory.
 import json
 from pathlib import Path
 from parser import MarkdownParser
-from transformer import Transformer
+from transformer import Transformer, HTMLSection, HTMLGroup, HTMLLinkGroup
 from generator import HTMLGenerator
 
 
@@ -350,27 +350,46 @@ def build():
         # Build search index entry for this page
         breadcrumb_str = " / ".join([bc["name"] for bc in breadcrumbs] + [current_name])
         index_links = []
-        for link in html_doc.ungrouped_links:
-            if link.raw_html:
-                continue
-            entry = {"text": link.text, "url": link.url}
-            if link.comment:
-                entry["comment"] = link.comment
-            index_links.append(entry)
-        for group in html_doc.groups:
-            for link in group.links:
-                if link.raw_html:
-                    continue
-                entry = {"text": link.text, "url": link.url, "group": group.name}
-                if link.comment:
-                    entry["comment"] = link.comment
-                index_links.append(entry)
+        section_names = []
+        group_names = []
+
+        def collect_links_from_items(items, section_name=None, group_name=None):
+            for item in items:
+                if isinstance(item, HTMLSection):
+                    section_names.append(item.name)
+                    collect_links_from_items(item.items, section_name=item.name)
+                elif isinstance(item, HTMLGroup):
+                    group_names.append(item.name)
+                    for link in item.links:
+                        if link.raw_html:
+                            continue
+                        entry = {"text": link.text, "url": link.url}
+                        if section_name:
+                            entry["section"] = section_name
+                        entry["group"] = item.name
+                        if link.comment:
+                            entry["comment"] = link.comment
+                        index_links.append(entry)
+                elif isinstance(item, HTMLLinkGroup):
+                    for link in item.links:
+                        if link.raw_html:
+                            continue
+                        entry = {"text": link.text, "url": link.url}
+                        if section_name:
+                            entry["section"] = section_name
+                        if link.comment:
+                            entry["comment"] = link.comment
+                        index_links.append(entry)
+
+        collect_links_from_items(html_doc.items)
+
         search_index.append({
             "path": page_rel,
             "title": title,
             "breadcrumbs": breadcrumb_str,
             "links": index_links,
-            "groups": [g.name for g in html_doc.groups],
+            "sections": section_names,
+            "groups": group_names,
             "children": [c["name"] for c in children]
         })
 

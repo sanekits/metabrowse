@@ -1,9 +1,9 @@
 """Transformer module: Convert parsed structure to HTML-ready data."""
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
-from parser import ParsedDocument, Link, Group
+from parser import ParsedDocument, Link, Group, Section
 
 
 @dataclass
@@ -15,22 +15,39 @@ class HTMLLink:
     raw_html: Optional[str] = None
     comment: Optional[str] = None
     url_hash: Optional[str] = None  # SHA256 hash for localStorage key
+    type: str = "link"
 
 
 @dataclass
 class HTMLGroup:
-    """Group prepared for HTML rendering."""
+    """Non-collapsible sub-group prepared for HTML rendering."""
     name: str
     links: List[HTMLLink]
     comment: Optional[str] = None
+    type: str = "group"
+
+
+@dataclass
+class HTMLLinkGroup:
+    """A group of consecutive standalone links, for clean <ul> wrapping."""
+    links: List[HTMLLink]
+    type: str = "link_group"
+
+
+@dataclass
+class HTMLSection:
+    """Collapsible section prepared for HTML rendering."""
+    name: str
+    items: list = field(default_factory=list)  # Ordered HTMLLink, HTMLGroup, HTMLLinkGroup
+    comment: Optional[str] = None
+    type: str = "section"
 
 
 @dataclass
 class HTMLDocument:
     """Document structure ready for template rendering."""
     title: str
-    ungrouped_links: List[HTMLLink]
-    groups: List[HTMLGroup]
+    items: list  # Ordered list of HTMLSection, HTMLGroup, HTMLLinkGroup
 
 
 class Transformer:
@@ -45,14 +62,54 @@ class Transformer:
 
     def transform(self, parsed_doc: ParsedDocument, title: str) -> HTMLDocument:
         """Transform a parsed document into HTML-ready structure."""
-        html_ungrouped = [self._transform_link(link) for link in parsed_doc.ungrouped_links]
-        html_groups = [self._transform_group(group) for group in parsed_doc.groups]
+        items = self._transform_items(parsed_doc.items)
 
         return HTMLDocument(
             title=title,
-            ungrouped_links=html_ungrouped,
-            groups=html_groups
+            items=items
         )
+
+    def _transform_items(self, items: list) -> list:
+        """Transform a list of parsed items and coalesce consecutive links."""
+        transformed = []
+        for item in items:
+            if isinstance(item, Section):
+                transformed.append(self._transform_section(item))
+            elif isinstance(item, Group):
+                transformed.append(self._transform_group(item))
+            elif isinstance(item, Link):
+                transformed.append(self._transform_link(item))
+        return self._coalesce_links(transformed)
+
+    def _transform_section(self, section: Section) -> HTMLSection:
+        """Transform a Section to HTMLSection."""
+        items = self._transform_items(section.items)
+        return HTMLSection(
+            name=section.name,
+            items=items,
+            comment=section.comment
+        )
+
+    @staticmethod
+    def _coalesce_links(items: list) -> list:
+        """Group consecutive HTMLLink items into HTMLLinkGroup objects."""
+        result = []
+        pending_links = []
+
+        def flush():
+            if pending_links:
+                result.append(HTMLLinkGroup(links=list(pending_links)))
+                pending_links.clear()
+
+        for item in items:
+            if isinstance(item, HTMLLink):
+                pending_links.append(item)
+            else:
+                flush()
+                result.append(item)
+
+        flush()
+        return result
 
     # URL schemes that don't use :// authority syntax
     _SCHEMES_WITHOUT_AUTHORITY = ('mailto:', 'tel:', 'about:')

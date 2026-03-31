@@ -191,35 +191,65 @@ h1.breadcrumbs {
   margin-left: 12px;
 }
 
-/* Groups */
-.group {
-  margin-bottom: 5px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+/* Sections (collapsible) */
+.section {
+  margin-bottom: 8px;
+  border: 2px solid #d0d0d0;
+  border-radius: 6px;
   overflow: hidden;
 }
 
-.group summary {
+.section > summary {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  background-color: #f8f9fa;
-  padding: 4px 13px;
-  font-weight: 600;
+  background-color: #e8ecef;
+  padding: 6px 13px;
+  font-weight: 700;
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s;
   color: #2c3e50;
-  font-size: 0.9em;
+  font-size: 0.95em;
 }
 
-.group summary:hover {
-  background-color: #e9ecef;
+.section > summary:hover {
+  background-color: #dde1e5;
 }
 
-.group[open] summary {
-  background-color: #34db62;
+.section[open] > summary {
+  background-color: #2ecc71;
   color: black;
+}
+
+.section-content {
+  padding: 6px 10px;
+}
+
+.section-comment {
+  font-size: 0.85em;
+  color: #7f8c8d;
+  font-style: italic;
+  font-weight: normal;
+  margin-left: 6px;
+}
+
+.section[open] > summary .section-comment {
+  color: #444;
+}
+
+/* Sub-groups (non-collapsible) */
+.subgroup {
+  margin-bottom: 5px;
+}
+
+.subgroup-header {
+  background-color: #f8f9fa;
+  padding: 4px 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9em;
+  border-bottom: 2px solid #34db62;
 }
 
 .group-comment {
@@ -228,10 +258,6 @@ h1.breadcrumbs {
   font-style: italic;
   font-weight: normal;
   margin-left: 6px;
-}
-
-.group[open] summary .group-comment {
-  color: #444;
 }
 
 .group-links {

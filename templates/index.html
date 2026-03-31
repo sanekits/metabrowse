@@ -50,10 +50,8 @@
     </div>
     {% endif %}
 
-    {% if ungrouped_links %}
-    <!-- Ungrouped links -->
-    <ul class="links">
-      {% for link in ungrouped_links %}
+    {# Macro for rendering a single link <li> #}
+    {% macro render_link(link) %}
       <li>
         {% if link.raw_html %}
           {{ link.raw_html|safe }}
@@ -68,41 +66,46 @@
         <span class="link-comment">ℹ {{ link.comment }}</span>
         {% endif %}
       </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
+    {% endmacro %}
 
-    {% if groups %}
-    <!-- Groups -->
-    {% for group in groups %}
-    <details class="group" open>
-      <summary>
-        {{ group.name }}
-        {% if group.comment %}
-        <span class="group-comment">ℹ {{ group.comment }}</span>
-        {% endif %}
-      </summary>
-      <ul class="group-links">
-        {% for link in group.links %}
-        <li>
-          {% if link.raw_html %}
-            {{ link.raw_html|safe }}
-          {% else %}
-            {% if link.url_hash %}
-            <img src="" alt="" class="link-favicon" data-link-url="{{ link.url }}" data-url-hash="{{ link.url_hash }}">
-            {% endif %}
-            <a href="{{ link.url }}" target="{{ link.target }}">{{ link.text }}</a>
-          {% endif %}
-          <button class="copy-btn" data-url="{{ link.url }}" title="Copy URL">&#x1F4CB;</button>
-          {% if link.comment %}
-          <span class="link-comment">ℹ {{ link.comment }}</span>
-          {% endif %}
-        </li>
+    {# Macro for rendering sub-items (link_group or group) inside a section or at top level #}
+    {% macro render_subitem(item) %}
+      {% if item.type == "group" %}
+      <div class="subgroup">
+        <div class="subgroup-header">{{ item.name }}
+          {% if item.comment %}<span class="group-comment">ℹ {{ item.comment }}</span>{% endif %}
+        </div>
+        <ul class="group-links">
+          {% for link in item.links %}
+          {{ render_link(link) }}
+          {% endfor %}
+        </ul>
+      </div>
+      {% elif item.type == "link_group" %}
+      <ul class="links">
+        {% for link in item.links %}
+        {{ render_link(link) }}
         {% endfor %}
       </ul>
-    </details>
+      {% endif %}
+    {% endmacro %}
+
+    {% for item in items %}
+      {% if item.type == "section" %}
+      <details class="section" open>
+        <summary>{{ item.name }}
+          {% if item.comment %}<span class="section-comment">ℹ {{ item.comment }}</span>{% endif %}
+        </summary>
+        <div class="section-content">
+          {% for sub in item.items %}
+          {{ render_subitem(sub) }}
+          {% endfor %}
+        </div>
+      </details>
+      {% else %}
+      {{ render_subitem(item) }}
+      {% endif %}
     {% endfor %}
-    {% endif %}
   </div>
   <script>
     document.addEventListener('click', function(e) {
@@ -257,11 +260,11 @@
 
   // Local filter state - collect all filterable items once
   var childLinks = document.querySelectorAll('.children-nav .child-link-wrap');
-  var ungroupedItems = document.querySelectorAll('.links > li');
-  var groups = document.querySelectorAll('.group');
-  var ungroupedContainer = document.querySelector('.links');
+  var sections = document.querySelectorAll('.section');
+  var topSubgroups = document.querySelectorAll('.container > .subgroup');
+  var topLinkGroups = document.querySelectorAll('.container > .links');
   var originalOpen = [];
-  groups.forEach(function(g) { originalOpen.push(g.open); });
+  sections.forEach(function(s) { originalOpen.push(s.open); });
 
   // Update placeholder based on mode
   function updatePlaceholder() {
@@ -313,6 +316,43 @@
     return (el.textContent || '').toLowerCase();
   }
 
+  // Filter links within a <ul>, return true if any match
+  function filterLinks(ul, lowerQuery) {
+    var anyMatch = false;
+    ul.querySelectorAll(':scope > li').forEach(function(li) {
+      var match = getSearchText(li).indexOf(lowerQuery) >= 0;
+      if (!match) {
+        var a = li.querySelector('a');
+        if (a && a.href && a.href.toLowerCase().indexOf(lowerQuery) >= 0) match = true;
+      }
+      li.style.display = match ? '' : 'none';
+      if (match) anyMatch = true;
+    });
+    return anyMatch;
+  }
+
+  // Filter a subgroup, return true if header or any link matches
+  function filterSubgroup(sg, lowerQuery) {
+    var headerEl = sg.querySelector('.subgroup-header');
+    var headerMatch = headerEl ? getSearchText(headerEl).indexOf(lowerQuery) >= 0 : false;
+    var linksUl = sg.querySelector('.group-links');
+    var anyLinkMatch = false;
+    if (linksUl) {
+      linksUl.querySelectorAll(':scope > li').forEach(function(li) {
+        var match = getSearchText(li).indexOf(lowerQuery) >= 0;
+        if (!match) {
+          var a = li.querySelector('a');
+          if (a && a.href && a.href.toLowerCase().indexOf(lowerQuery) >= 0) match = true;
+        }
+        li.style.display = (match || headerMatch) ? '' : 'none';
+        if (match) anyLinkMatch = true;
+      });
+    }
+    var visible = headerMatch || anyLinkMatch;
+    sg.style.display = visible ? '' : 'none';
+    return visible;
+  }
+
   function filterCurrentPage(query) {
     // Hide global results panel
     if (resultsPanel) resultsPanel.style.display = 'none';
@@ -320,12 +360,25 @@
     if (!query) {
       // Restore everything
       childLinks.forEach(function(el) { el.style.display = ''; });
-      ungroupedItems.forEach(function(el) { el.style.display = ''; });
-      if (ungroupedContainer) ungroupedContainer.style.display = '';
-      groups.forEach(function(g, i) {
-        g.style.display = '';
-        g.open = originalOpen[i];
-        g.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
+      sections.forEach(function(s, i) {
+        s.style.display = '';
+        s.open = originalOpen[i];
+        s.querySelectorAll('.subgroup').forEach(function(sg) {
+          sg.style.display = '';
+          sg.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
+        });
+        s.querySelectorAll('.links').forEach(function(ul) {
+          ul.style.display = '';
+          ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
+        });
+      });
+      topSubgroups.forEach(function(sg) {
+        sg.style.display = '';
+        sg.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
+      });
+      topLinkGroups.forEach(function(ul) {
+        ul.style.display = '';
+        ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
       });
       return;
     }
@@ -337,43 +390,39 @@
       el.style.display = getSearchText(el).indexOf(lowerQuery) >= 0 ? '' : 'none';
     });
 
-    // Filter ungrouped links
-    var anyUngrouped = false;
-    ungroupedItems.forEach(function(li) {
-      var match = getSearchText(li).indexOf(lowerQuery) >= 0;
-      if (!match) {
-        var a = li.querySelector('a');
-        if (a && a.href && a.href.toLowerCase().indexOf(lowerQuery) >= 0) match = true;
-      }
-      li.style.display = match ? '' : 'none';
-      if (match) anyUngrouped = true;
-    });
-    if (ungroupedContainer) {
-      ungroupedContainer.style.display = anyUngrouped ? '' : 'none';
-    }
-
-    // Filter groups
-    groups.forEach(function(g) {
-      var summaryText = g.querySelector('summary') ? getSearchText(g.querySelector('summary')) : '';
-      var groupMatch = summaryText.indexOf(lowerQuery) >= 0;
+    // Filter sections
+    sections.forEach(function(s) {
+      var summaryEl = s.querySelector('summary');
+      var sectionMatch = summaryEl ? getSearchText(summaryEl).indexOf(lowerQuery) >= 0 : false;
       var anyChildMatch = false;
 
-      g.querySelectorAll('.group-links > li').forEach(function(li) {
-        var match = getSearchText(li).indexOf(lowerQuery) >= 0;
-        if (!match) {
-          var a = li.querySelector('a');
-          if (a && a.href && a.href.toLowerCase().indexOf(lowerQuery) >= 0) match = true;
-        }
-        li.style.display = (match || groupMatch) ? '' : 'none';
+      // Filter sub-items within section
+      s.querySelectorAll('.section-content > .subgroup').forEach(function(sg) {
+        if (filterSubgroup(sg, lowerQuery)) anyChildMatch = true;
+      });
+      s.querySelectorAll('.section-content > .links').forEach(function(ul) {
+        var match = filterLinks(ul, lowerQuery);
+        ul.style.display = match ? '' : 'none';
         if (match) anyChildMatch = true;
       });
 
-      if (groupMatch || anyChildMatch) {
-        g.style.display = '';
-        g.open = true;
+      if (sectionMatch || anyChildMatch) {
+        s.style.display = '';
+        s.open = true;
       } else {
-        g.style.display = 'none';
+        s.style.display = 'none';
       }
+    });
+
+    // Filter top-level subgroups (outside sections)
+    topSubgroups.forEach(function(sg) {
+      filterSubgroup(sg, lowerQuery);
+    });
+
+    // Filter top-level link groups (outside sections)
+    topLinkGroups.forEach(function(ul) {
+      var match = filterLinks(ul, lowerQuery);
+      ul.style.display = match ? '' : 'none';
     });
   }
 
@@ -409,12 +458,25 @@
   function showGlobalResults(query) {
     // Restore all local page elements first
     childLinks.forEach(function(el) { el.style.display = ''; });
-    ungroupedItems.forEach(function(el) { el.style.display = ''; });
-    if (ungroupedContainer) ungroupedContainer.style.display = '';
-    groups.forEach(function(g, i) {
-      g.style.display = '';
-      g.open = originalOpen[i];
-      g.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
+    sections.forEach(function(s, i) {
+      s.style.display = '';
+      s.open = originalOpen[i];
+      s.querySelectorAll('.subgroup').forEach(function(sg) {
+        sg.style.display = '';
+        sg.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
+      });
+      s.querySelectorAll('.links').forEach(function(ul) {
+        ul.style.display = '';
+        ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
+      });
+    });
+    topSubgroups.forEach(function(sg) {
+      sg.style.display = '';
+      sg.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
+    });
+    topLinkGroups.forEach(function(ul) {
+      ul.style.display = '';
+      ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
     });
 
     if (!query) {
@@ -448,6 +510,13 @@
         }
       }
 
+      // Match section names
+      for (var sc = 0; sc < (page.sections || []).length; sc++) {
+        if (page.sections[sc].toLowerCase().indexOf(lowerQuery) >= 0) {
+          matches.push({ page: page, type: 'section', text: page.sections[sc] });
+        }
+      }
+
       // Match group names
       for (var g = 0; g < (page.groups || []).length; g++) {
         if (page.groups[g].toLowerCase().indexOf(lowerQuery) >= 0) {
@@ -465,10 +534,10 @@
           matched = true;
         } else if (link.url.toLowerCase().indexOf(lowerQuery) >= 0) {
           matched = true;
-          matchText = link.text + ' — ' + link.url;
+          matchText = link.text + ' \u2014 ' + link.url;
         } else if (link.comment && link.comment.toLowerCase().indexOf(lowerQuery) >= 0) {
           matched = true;
-          matchText = link.text + ' — ' + link.comment;
+          matchText = link.text + ' \u2014 ' + link.comment;
         }
 
         if (matched) {
@@ -504,7 +573,7 @@
               highlightMatch(group.page.breadcrumbs, query) + '</a>';
       for (var r = 0; r < group.items.length; r++) {
         var item = group.items[r];
-        var typeLabel = item.type === 'link' ? '→' : item.type === 'group' ? '▸' : item.type === 'child' ? '◆' : '📄';
+        var typeLabel = item.type === 'link' ? '\u2192' : item.type === 'section' ? '\u00A7' : item.type === 'group' ? '\u25B8' : item.type === 'child' ? '\u25C6' : '\uD83D\uDCC4';
         html += '<div class="search-result-item">';
         html += '<span class="search-result-type">' + typeLabel + '</span> ';
         html += '<a href="' + escapeHtml(group.page.path) + '" class="search-result-link" target="_self">' +

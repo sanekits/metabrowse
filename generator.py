@@ -43,8 +43,7 @@ class HTMLGenerator:
 
         html_content = template.render(
             title=html_doc.title,
-            ungrouped_links=html_doc.ungrouped_links,
-            groups=html_doc.groups,
+            items=html_doc.items,
             css_path=css_relative_path,
             favicon_path=favicon_relative_path,
             favicon_ico_path=favicon_relative_path.replace('favicon.png', 'favicon.ico'),
