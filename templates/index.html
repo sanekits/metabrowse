@@ -358,28 +358,7 @@
     if (resultsPanel) resultsPanel.style.display = 'none';
 
     if (!query) {
-      // Restore everything
-      childLinks.forEach(function(el) { el.style.display = ''; });
-      sections.forEach(function(s, i) {
-        s.style.display = '';
-        s.open = originalOpen[i];
-        s.querySelectorAll('.subgroup').forEach(function(sg) {
-          sg.style.display = '';
-          sg.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
-        });
-        s.querySelectorAll('.links').forEach(function(ul) {
-          ul.style.display = '';
-          ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
-        });
-      });
-      topSubgroups.forEach(function(sg) {
-        sg.style.display = '';
-        sg.querySelectorAll('.group-links > li').forEach(function(li) { li.style.display = ''; });
-      });
-      topLinkGroups.forEach(function(ul) {
-        ul.style.display = '';
-        ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
-      });
+      restorePageContent();
       return;
     }
 
@@ -455,8 +434,8 @@
     });
   }
 
-  function showGlobalResults(query) {
-    // Restore all local page elements first
+  // Restore all page content to visible (undo any local filter hiding)
+  function restorePageContent() {
     childLinks.forEach(function(el) { el.style.display = ''; });
     sections.forEach(function(s, i) {
       s.style.display = '';
@@ -478,9 +457,20 @@
       ul.style.display = '';
       ul.querySelectorAll(':scope > li').forEach(function(li) { li.style.display = ''; });
     });
+  }
 
+  // Hide all page content (children, sections, groups, links)
+  function hidePageContent() {
+    childLinks.forEach(function(el) { el.style.display = 'none'; });
+    sections.forEach(function(s) { s.style.display = 'none'; });
+    topSubgroups.forEach(function(sg) { sg.style.display = 'none'; });
+    topLinkGroups.forEach(function(ul) { ul.style.display = 'none'; });
+  }
+
+  function showGlobalResults(query) {
     if (!query) {
       if (resultsPanel) resultsPanel.style.display = 'none';
+      restorePageContent();
       return;
     }
 
@@ -490,6 +480,7 @@
     }
 
     if (resultsPanel) resultsPanel.style.display = '';
+    hidePageContent();
 
     var lowerQuery = query.toLowerCase();
     var matches = [];
@@ -644,6 +635,44 @@
     }
   });
 
+  // "e" keyboard shortcut - open edit link
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'e' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var tag = (document.activeElement || {}).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      var editLink = document.querySelector('.edit-link');
+      if (editLink) {
+        e.preventDefault();
+        editLink.click();
+      }
+    }
+  });
+
+  // "c" keyboard shortcut - toggle collapse/restore all sections
+  var savedStates = [];
+  var allCollapsed = false;
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var tag = (document.activeElement || {}).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (sections.length === 0) return;
+      e.preventDefault();
+      if (!allCollapsed) {
+        // Save current state and collapse all
+        savedStates = [];
+        sections.forEach(function(s) { savedStates.push(s.open); });
+        sections.forEach(function(s) { s.open = false; });
+        allCollapsed = true;
+      } else {
+        // Restore saved state
+        sections.forEach(function(s, i) {
+          s.open = i < savedStates.length ? savedStates[i] : true;
+        });
+        allCollapsed = false;
+      }
+    }
+  });
+
   // Click outside results panel to hide it
   document.addEventListener('click', function(e) {
     if (resultsPanel &&
@@ -660,5 +689,14 @@
   updateClearButton();
 })();
   </script>
+  <footer class="shortcut-help">
+    <kbd>e</kbd> Edit
+    <span class="shortcut-sep">|</span>
+    <kbd>/</kbd> Search page
+    <span class="shortcut-sep">|</span>
+    <kbd>Ctrl+K</kbd> Search all
+    <span class="shortcut-sep">|</span>
+    <kbd>c</kbd> Collapse/restore
+  </footer>
 </body>
 </html>
