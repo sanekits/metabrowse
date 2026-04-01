@@ -7,6 +7,7 @@ and generates corresponding index.html files in the docs/ directory.
 """
 
 import json
+import time
 from pathlib import Path
 from parser import MarkdownParser
 from transformer import Transformer, HTMLSection, HTMLGroup, HTMLLinkGroup
@@ -36,10 +37,11 @@ def calculate_css_path(output_file: Path, docs_root: Path) -> str:
         depth = 0
 
     # Build the path: "../" for each level, then "style.css"
+    cache_bust = "?v=" + str(int(time.time()))
     if depth == 0:
-        return "style.css"
+        return "style.css" + cache_bust
     else:
-        return "../" * depth + "style.css"
+        return "../" * depth + "style.css" + cache_bust
 
 
 def calculate_favicon_path(output_file: Path, docs_root: Path) -> str:
