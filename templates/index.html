@@ -570,7 +570,9 @@
         var typeLabel = item.type === 'link' ? '\u2192' : item.type === 'section' ? '\u00A7' : item.type === 'group' ? '\u25B8' : item.type === 'child' ? '\u25C6' : '\uD83D\uDCC4';
         html += '<div class="search-result-item">';
         html += '<span class="search-result-type">' + typeLabel + '</span> ';
-        html += '<a href="' + escapeHtml(group.page.path) + '" class="search-result-link" target="_self">' +
+        var linkHref = (item.type === 'link' && item.link) ? item.link.url : group.page.path;
+        var linkTarget = (item.type === 'link' && item.link) ? '_blank' : '_self';
+        html += '<a href="' + escapeHtml(linkHref) + '" class="search-result-link" target="' + linkTarget + '">' +
                 highlightMatch(item.text, query) + '</a>';
         html += '</div>';
       }
