@@ -347,7 +347,7 @@ def build():
         # Generate HTML
         generator.generate_html(html_doc, output_file, css_path, favicon_path, breadcrumbs, current_name, children, edit_url, search_index_path)
 
-        print(f"  → Generated: {output_file}")
+        print(f"  -> Generated: {output_file}")
 
         # Build search index entry for this page
         breadcrumb_str = " / ".join([bc["name"] for bc in breadcrumbs] + [current_name])
