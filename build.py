@@ -9,6 +9,7 @@ and generates corresponding index.html files in the docs/ directory.
 import json
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 from parser import MarkdownParser
 from transformer import Transformer, HTMLSection, HTMLGroup, HTMLLinkGroup
 from generator import HTMLGenerator
@@ -254,6 +255,58 @@ def generate_edit_url(readme_path: Path, text_root: Path, base_url: str) -> str:
         raise SystemExit(1)
 
 
+def parse_edit_base_url(edit_base_url: str) -> dict:
+    """
+    Parse EDIT_BASE_URL to extract host, owner, and repo.
+
+    Args:
+        edit_base_url: e.g. "https://bbgithub.dev.bloomberg.com/training-lmatheson4/bb-metabrowse-links/edit/main"
+
+    Returns:
+        dict with keys: host, owner, repo
+    """
+    parsed = urlparse(edit_base_url)
+    host = parsed.hostname
+    # path like: /training-lmatheson4/bb-metabrowse-links/edit/main
+    parts = parsed.path.strip('/').split('/')
+    owner = parts[0]
+    repo = parts[1]
+    return {'host': host, 'owner': owner, 'repo': repo}
+
+
+def calculate_editor_url(output_file: Path, docs_root: Path, repo_info: dict,
+                         readme_path: Path, text_root: Path) -> str:
+    """
+    Calculate the relative URL to the editor SPA with query params.
+
+    Args:
+        output_file: Path to the HTML file being generated
+        docs_root: Path to the docs/ root directory
+        repo_info: dict with host, owner, repo keys
+        readme_path: Path to the source README.md file
+        text_root: Path to the text/ root directory
+
+    Returns:
+        Relative URL to editor/index.html with query params
+    """
+    html_dir = output_file.parent
+
+    try:
+        relative = html_dir.relative_to(docs_root)
+        depth = len(relative.parts)
+    except ValueError:
+        depth = 0
+
+    editor_base = "../" * depth + "editor/index.html"
+
+    # Calculate file path relative to repo root (e.g. text/foo/README.md)
+    rel_path = readme_path.relative_to(text_root.parent)
+    file_path = str(rel_path).replace('\\', '/')
+
+    params = f"?host={repo_info['host']}&owner={repo_info['owner']}&repo={repo_info['repo']}&path={file_path}"
+    return editor_base + params
+
+
 def build():
     """Main build function."""
     # Setup paths
@@ -271,8 +324,9 @@ def build():
     transformer = Transformer()
     generator = HTMLGenerator(template_dir, docs_root)
 
-    # Read edit base URL from config file
+    # Read edit base URL from config file and parse repo info for editor SPA
     edit_base_url = read_edit_base_url(content_root)
+    repo_info = parse_edit_base_url(edit_base_url)
 
     # Copy static assets first
     print("Copying static assets...")
@@ -328,8 +382,8 @@ def build():
         # Find child directories
         children = find_child_directories(readme_path)
 
-        # Generate edit URL
-        edit_url = generate_edit_url(readme_path, text_root, edit_base_url)
+        # Generate editor URL (points to editor SPA with query params)
+        edit_url = calculate_editor_url(output_file, docs_root, repo_info, readme_path, text_root)
 
         # Calculate relative path for this page (used in search index)
         try:

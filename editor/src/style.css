@@ -1,0 +1,187 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Auth screen */
+.auth-screen {
+  max-width: 400px;
+  margin: 15vh auto;
+  padding: 2rem;
+}
+
+.auth-screen h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #89b4fa;
+}
+
+.auth-screen p {
+  margin-bottom: 1.5rem;
+  color: #a6adc8;
+}
+
+.auth-screen form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-screen label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #a6adc8;
+}
+
+.auth-screen input {
+  padding: 0.5rem;
+  background: #313244;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  color: #cdd6f4;
+  font-size: 1rem;
+}
+
+.auth-screen input:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+.auth-screen button {
+  padding: 0.625rem;
+  background: #89b4fa;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-screen button:hover {
+  background: #74c7ec;
+}
+
+/* Error screen */
+.error-screen {
+  max-width: 500px;
+  margin: 15vh auto;
+  padding: 2rem;
+}
+
+.error-screen h1 {
+  font-size: 1.5rem;
+  color: #f38ba8;
+  margin-bottom: 1rem;
+}
+
+.error-screen p {
+  color: #a6adc8;
+  margin-bottom: 0.5rem;
+}
+
+.error-screen code {
+  display: block;
+  padding: 0.75rem;
+  background: #313244;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #cdd6f4;
+  margin-top: 0.5rem;
+  word-break: break-all;
+}
+
+/* Editor screen */
+.editor-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.editor-screen header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #181825;
+  border-bottom: 1px solid #313244;
+}
+
+.filename {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: #89b4fa;
+}
+
+#status-msg {
+  font-size: 0.875rem;
+  margin-left: auto;
+}
+
+#status-msg.success {
+  color: #a6e3a1;
+}
+
+#status-msg.error {
+  color: #f38ba8;
+}
+
+#editor-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.error {
+  color: #f38ba8;
+}
+
+#confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: #45475a;
+  color: #f38ba8;
+  font-size: 0.875rem;
+}
+
+.confirm-hint {
+  color: #a6adc8;
+}
+
+/* Loading state */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: #a6adc8;
+  font-size: 1.125rem;
+}
+
+/* CodeMirror overrides */
+.cm-editor {
+  height: 100%;
+  font-size: 14px;
+}
+
+.cm-editor .cm-content {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}

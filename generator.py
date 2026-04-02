@@ -86,6 +86,18 @@ class HTMLGenerator:
                 favicon_dest = self.output_dir / 'favicon.png'
                 shutil.copy2(favicon_source, favicon_dest)
 
+        # Copy editor SPA (must be pre-built via npm run build)
+        code_root = self.template_dir.parent
+        editor_dist = code_root / 'editor' / 'dist'
+        if not editor_dist.exists():
+            print(f"ERROR: Editor SPA not found at {editor_dist}")
+            print("Run 'cd editor && npm ci && npm run build' to build the editor.")
+            raise SystemExit(1)
+        editor_dest = self.output_dir / 'editor'
+        if editor_dest.exists():
+            shutil.rmtree(editor_dest)
+        shutil.copytree(editor_dist, editor_dest)
+
         # Create .nojekyll file to disable Jekyll on GitHub Pages
         nojekyll_file = self.output_dir / '.nojekyll'
         nojekyll_file.touch()
