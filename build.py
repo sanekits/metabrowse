@@ -261,14 +261,14 @@ def parse_edit_base_url(edit_base_url: str) -> dict:
     Parse EDIT_BASE_URL to extract host, owner, and repo.
 
     Args:
-        edit_base_url: e.g. "https://bbgithub.dev.bloomberg.com/training-lmatheson4/bb-metabrowse-links/edit/main"
+        edit_base_url: e.g. "https://foo.dev.enterprise.com/[userOrg]/my-metabrowse-links/edit/main"
 
     Returns:
         dict with keys: host, owner, repo
     """
     parsed = urlparse(edit_base_url)
     host = parsed.hostname
-    # path like: /training-lmatheson4/bb-metabrowse-links/edit/main
+    # path like: /my-repo/my-metabrowse-links/edit/main
     parts = parsed.path.strip('/').split('/')
     owner = parts[0]
     repo = parts[1]

@@ -15,7 +15,7 @@ scriptName="${scriptName:-"$(command readlink -f -- "$0")"}"
 scriptDir="$(command dirname -- "${scriptName}")"
 
 export METABROWSE_CODE_DIR=${METABROWSE_CODE_DIR:-"${scriptDir}"}
-export METABROWSE_PYTHON=${METABROWSE_PYTHON:-"${HOME}/.local/bin/python3"}
+export METABROWSE_PYTHON="${HOME}/.local/bin/python3"
 
 die() {
     builtin echo "ERROR($(basename "${scriptName}")): $*" >&2

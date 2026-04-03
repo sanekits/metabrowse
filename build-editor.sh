@@ -5,8 +5,12 @@
 # The built output in editor/dist/ must be committed to this repo
 # so that Jenkins can deploy it without needing Node.js.
 #
+# The DEFAULT_HOST is injected at build time via VITE_DEFAULT_HOST environment variable.
+# If not set, defaults to 'github.com' (public GitHub).
+#
 # Usage:
-#   ./build-editor.sh
+#   ./build-editor.sh                                      # Uses default
+#   VITE_DEFAULT_HOST=<your-github-host> ./build-editor.sh  # Use custom host
 #
 set -ueo pipefail
 
