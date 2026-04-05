@@ -169,6 +169,20 @@ Key method: `generate_target(url)` - creates hash-based target for external URLs
 - Automatically creates parent directories as needed
 - Skips directories that already contain README.md files
 
+## Editor SPA (`editor/`)
+
+The `editor/` directory contains a lightweight TypeScript SPA that provides in-browser editing of content files. It opens in a new tab when the user clicks "Edit" on any metabrowse page.
+
+The editor component itself (CodeMirror 6 + vim mode) is provided by **veditor.web** (`Stabledog/veditor.web`), a shared component also used by notehub.web. It is loaded at runtime from GitHub Pages via dynamic `import()`. The base URL defaults to `https://stabledog.github.io/veditor.web` and can be overridden via the `VITE_VEDITOR_BASE` environment variable (required for GHES deployments).
+
+The editor SPA handles auth (PAT + host), file loading/saving via the GitHub Contents API, and the app shell (header, status messages, confirm bar). The `editor/dist/` directory contains pre-built artifacts that are committed and copied into content repos' `docs/editor/` during the Python build. Rebuild with:
+
+```bash
+cd editor && npm ci && npm run build
+```
+
+**Important**: GitHub Actions does NOT rebuild the editor JS. If you change `editor/src/`, you must rebuild locally and commit the updated `dist/`.
+
 ## Directory Structure
 
 **Code repository** (this repo):
@@ -177,6 +191,9 @@ metabrowse/
 ├── templates/            # Jinja2 templates
 │   ├── index.html        # Main template
 │   └── style.css         # Shared stylesheet
+├── editor/               # Editor SPA (uses veditor.web at runtime)
+│   ├── src/              # TypeScript source
+│   └── dist/             # Pre-built output (committed)
 ├── parser.py             # Stage 1: Extract links/groups
 ├── transformer.py        # Stage 2: Generate targets, prepare HTML data
 ├── generator.py          # Stage 3: Render templates
