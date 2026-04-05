@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { vim, Vim } from '@replit/codemirror-vim';
 import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
@@ -11,7 +11,18 @@ export interface EditorCallbacks {
   onQuit: (force: boolean) => void;
 }
 
+const WRAP_KEY = 'metabrowse_line_wrap';
+
+function getWrapPref(): boolean {
+  return localStorage.getItem(WRAP_KEY) !== 'false'; // default on
+}
+
+function setWrapPref(on: boolean): void {
+  localStorage.setItem(WRAP_KEY, String(on));
+}
+
 let editorView: EditorView | null = null;
+const wrapCompartment = new Compartment();
 
 export function createEditor(
   parent: HTMLElement,
@@ -32,6 +43,15 @@ export function createEditor(
   Vim.defineEx('wq', 'wq', async () => {
     await callbacks.onSave();
     callbacks.onQuit(false);
+  });
+
+  Vim.defineEx('wrap', 'wrap', () => {
+    if (!editorView) return;
+    const nowOn = !getWrapPref();
+    setWrapPref(nowOn);
+    editorView.dispatch({
+      effects: wrapCompartment.reconfigure(nowOn ? EditorView.lineWrapping : []),
+    });
   });
 
   Vim.map('jk', '<Esc>', 'insert');
@@ -60,6 +80,7 @@ export function createEditor(
       basicSetup,
       markdown({ codeLanguages: languages }),
       oneDark,
+      wrapCompartment.of(getWrapPref() ? EditorView.lineWrapping : []),
       EditorView.theme({
         '&': { height: '100%' },
         '.cm-scroller': { overflow: 'auto' },
