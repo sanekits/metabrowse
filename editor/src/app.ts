@@ -135,7 +135,7 @@ function renderEditor(): void {
 
   veditor.createEditor(document.getElementById('editor-container')!, originalContent, {
     onSave: handleSave,
-    onQuit: handleQuit,
+    onQuit: closeTab,
   }, {
     storagePrefix: 'metabrowse',
   });
@@ -176,42 +176,12 @@ async function handleSave(): Promise<void> {
   }
 }
 
-function handleQuit(force: boolean): void {
-  if (!force && veditor.isEditorDirty(originalContent)) {
-    showConfirmBar('Unsaved changes. Close anyway?', () => closeTab());
-    return;
-  }
-  closeTab();
-}
-
 function closeTab(): void {
   window.close();
   // If window.close() is blocked (tab not opened by script), show message
   setTimeout(() => {
     showStatus('You can close this tab.');
   }, 100);
-}
-
-function showConfirmBar(message: string, onConfirm: () => void): void {
-  document.getElementById('confirm-bar')?.remove();
-
-  const bar = document.createElement('div');
-  bar.id = 'confirm-bar';
-  bar.innerHTML = `
-    <span>${escapeHtml(message)}</span>
-    <span class="confirm-hint">[y]es / [n]o</span>
-  `;
-
-  const header = document.querySelector('.editor-screen header');
-  if (!header) return;
-  header.after(bar);
-
-  const dismiss = () => { bar.remove(); document.removeEventListener('keydown', onKey); };
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'y' || e.key === 'Enter') { dismiss(); onConfirm(); }
-    else if (e.key === 'n' || e.key === 'Escape') { dismiss(); }
-  };
-  document.addEventListener('keydown', onKey);
 }
 
 function showStatus(msg: string, isError = false): void {
