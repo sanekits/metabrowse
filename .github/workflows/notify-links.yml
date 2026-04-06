@@ -3,6 +3,8 @@ name: Notify metabrowse-links
 on:
   push:
     branches: [main]
+  repository_dispatch:
+    types: [veditor-updated]
 
 jobs:
   build-editor:
