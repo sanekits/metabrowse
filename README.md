@@ -2,7 +2,6 @@
 
 A markdown-to-HTML static site generator for teaching materials with collapsible link groups and browser tab reuse.
 
-
 ## Architecture
 
 Metabrowse separates **code** (this repository) from **content** (your link collections):
