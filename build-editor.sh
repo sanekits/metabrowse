@@ -33,10 +33,8 @@ main() {
     echo "Building editor SPA..."
     npm run build
 
-    git add dist/
-
     echo ""
-    echo "Build complete: editor/dist/ (staged for commit)"
+    echo "Build complete: editor/dist/"
 }
 
 if [[ -z "${sourceMe:-}" ]]; then
