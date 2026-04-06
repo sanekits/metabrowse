@@ -89,10 +89,19 @@ cd /path/to/test-content
 ~/.local/bin/python3 -m pip install -r requirements.txt
 ```
 
+**Building the editor SPA:**
+```bash
+# From this repo's root:
+VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com ./build-editor.sh
+
+# editor/dist/ is committed to this repo; the content build copies it into generated sites
+```
+
 **Environment variables:**
 - `METABROWSE_CODE_DIR`: Override location of code repository (default: directory containing build-metabrowse.sh)
 - `METABROWSE_PYTHON`: Override Python interpreter (default: `~/.local/bin/python3`)
 - `METABROWSE_PORT`: Port for local web server (default: 3000, used by serve-metabrowse.sh)
+- `VITE_DEFAULT_HOST`: GitHub host for editor SPA API calls (default: `github.com`)
 
 Note: This project uses `~/.local/bin/python3` as the default Python interpreter path.
 
@@ -182,9 +191,15 @@ metabrowse/
 ├── generator.py          # Stage 3: Render templates
 ├── build.py              # Main orchestrator
 ├── build-metabrowse.sh   # User-facing build wrapper
+├── build-editor.sh       # Build the editor SPA (editor/dist/)
 ├── serve-metabrowse.sh   # Local preview server for testing
 ├── metabrowse-wiz.sh     # Content wizard for creating directories
-└── requirements.txt      # Python dependencies
+├── requirements.txt      # Python dependencies
+└── editor/               # Browser-based editor SPA
+    ├── src/              # TypeScript source (CodeMirror + vim via veditor.web)
+    ├── dist/             # Built output (committed to repo)
+    ├── package.json      # Editor npm dependencies
+    └── vite.config.ts    # Vite build config
 ```
 
 **Content repository** (user's separate repo):

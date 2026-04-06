@@ -27,7 +27,7 @@ main() {
 
     if [[ ! -d node_modules ]]; then
         echo "Installing dependencies..."
-        npm ci
+        npm install
     fi
 
     echo "Building editor SPA..."

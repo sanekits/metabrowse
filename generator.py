@@ -92,7 +92,7 @@ class HTMLGenerator:
         editor_dist = code_root / 'editor' / 'dist'
         if not editor_dist.exists():
             print(f"ERROR: Editor SPA not found at {editor_dist}")
-            print("Run 'cd editor && npm ci && npm run build' to build the editor.")
+            print("Run 'cd editor && npm install && npm run build' to build the editor.")
             raise SystemExit(1)
         editor_dest = self.output_dir / 'editor'
         if editor_dest.exists():

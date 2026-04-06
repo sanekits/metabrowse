@@ -33,7 +33,7 @@ This separation allows:
 
 ### For Developers (Working with Code)
 
-This repository contains the build pipeline:
+This repository contains the build pipeline and a browser-based editor SPA:
 
 ```
 metabrowse/
@@ -42,7 +42,19 @@ metabrowse/
 ├── parser.py           # Markdown parser
 ├── transformer.py      # Data transformer
 ├── generator.py        # HTML generator
-└── build-metabrowse.sh # User-facing build script
+├── build-metabrowse.sh # User-facing build script
+├── build-editor.sh     # Build the editor SPA
+└── editor/             # Browser-based editor (TypeScript/Vite)
+    ├── src/            # Editor source code
+    ├── dist/           # Built editor (committed to repo)
+    └── package.json    # Editor npm dependencies
+```
+
+The **editor SPA** is a CodeMirror 6 + vim mode editor embedded in generated metabrowse pages for in-browser editing. It is built separately via `build-editor.sh` and the `editor/dist/` output is committed to this repo. The editor uses **veditor.web** as its shared editor component.
+
+```bash
+# Build the editor (sets VITE_DEFAULT_HOST for GitHub API calls):
+VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com ./build-editor.sh
 ```
 
 ## Markdown Syntax
