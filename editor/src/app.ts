@@ -1,8 +1,13 @@
 import { validateToken, getFileContent, updateFileContent, DEFAULT_HOST } from './github';
-import { createEditor, getEditorContent, isEditorDirty, destroyEditor } from './editor';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
+
+// veditor base URL — override via VITE_VEDITOR_BASE for GHES or local dev.
+const VEDITOR_BASE = import.meta.env.VITE_VEDITOR_BASE || 'https://stabledog.github.io/veditor.web';
+
+// veditor API — populated by init() before use.
+let veditor: typeof import('./veditor');
 
 interface EditorParams {
   host: string;
@@ -18,7 +23,20 @@ let fileSha = '';
 
 const app = document.getElementById('app')!;
 
-export function init(): void {
+export async function init(): Promise<void> {
+  // Load veditor CSS + JS from Pages CDN
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `${VEDITOR_BASE}/veditor.css`;
+  document.head.appendChild(link);
+
+  try {
+    veditor = await import(/* @vite-ignore */ `${VEDITOR_BASE}/veditor.js`);
+  } catch (err) {
+    showError('Failed to load editor', `Could not load veditor from ${VEDITOR_BASE}/veditor.js: ${err instanceof Error ? err.message : err}`);
+    return;
+  }
+
   // Parse URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const host = urlParams.get('host') || localStorage.getItem(LS_HOST) || DEFAULT_HOST;
@@ -47,7 +65,7 @@ export function init(): void {
 }
 
 function showAuth(error?: string): void {
-  destroyEditor();
+  veditor.destroyEditor();
   const savedHost = params?.host || localStorage.getItem(LS_HOST) || DEFAULT_HOST;
 
   app.innerHTML = `
@@ -115,16 +133,18 @@ function renderEditor(): void {
     </div>
   `;
 
-  createEditor(document.getElementById('editor-container')!, originalContent, {
+  veditor.createEditor(document.getElementById('editor-container')!, originalContent, {
     onSave: handleSave,
-    onQuit: handleQuit,
+    onQuit: closeTab,
+  }, {
+    storagePrefix: 'metabrowse',
   });
 }
 
 async function handleSave(): Promise<void> {
   if (!params) return;
 
-  const content = getEditorContent();
+  const content = veditor.getEditorContent();
 
   if (content === originalContent) {
     showStatus('No changes');
@@ -156,42 +176,12 @@ async function handleSave(): Promise<void> {
   }
 }
 
-function handleQuit(force: boolean): void {
-  if (!force && isEditorDirty(originalContent)) {
-    showConfirmBar('Unsaved changes. Close anyway?', () => closeTab());
-    return;
-  }
-  closeTab();
-}
-
 function closeTab(): void {
   window.close();
   // If window.close() is blocked (tab not opened by script), show message
   setTimeout(() => {
     showStatus('You can close this tab.');
   }, 100);
-}
-
-function showConfirmBar(message: string, onConfirm: () => void): void {
-  document.getElementById('confirm-bar')?.remove();
-
-  const bar = document.createElement('div');
-  bar.id = 'confirm-bar';
-  bar.innerHTML = `
-    <span>${escapeHtml(message)}</span>
-    <span class="confirm-hint">[y]es / [n]o</span>
-  `;
-
-  const header = document.querySelector('.editor-screen header');
-  if (!header) return;
-  header.after(bar);
-
-  const dismiss = () => { bar.remove(); document.removeEventListener('keydown', onKey); };
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'y' || e.key === 'Enter') { dismiss(); onConfirm(); }
-    else if (e.key === 'n' || e.key === 'Escape') { dismiss(); }
-  };
-  document.addEventListener('keydown', onKey);
 }
 
 function showStatus(msg: string, isError = false): void {
