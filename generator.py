@@ -89,7 +89,7 @@ class HTMLGenerator:
                 favicon_dest = self.output_dir / 'favicon.png'
                 shutil.copy2(favicon_source, favicon_dest)
 
-        # Copy editor SPA (must be pre-built via npm run build)
+        # Copy editor SPA (built by buildserver or locally via ./build-editor.sh)
         code_root = self.template_dir.parent
         editor_dist = code_root / 'editor' / 'dist'
         if not editor_dist.exists():

@@ -94,7 +94,7 @@ cd /path/to/test-content
 # From this repo's root:
 VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com ./build-editor.sh
 
-# editor/dist/ is committed to this repo; the content build copies it into generated sites
+# editor/dist/ is gitignored; the buildserver rebuilds it on demand
 ```
 
 **Environment variables:**
@@ -184,13 +184,11 @@ The `editor/` directory contains a lightweight TypeScript SPA that provides in-b
 
 The editor component itself (CodeMirror 6 + vim mode) is provided by **veditor.web** (`Stabledog/veditor.web`), a shared component also used by notehub.web. It is loaded at runtime from GitHub Pages via dynamic `import()`. The base URL defaults to `https://stabledog.github.io/veditor.web` and can be overridden via the `VITE_VEDITOR_BASE` environment variable (required for GHES deployments).
 
-The editor SPA handles auth (PAT + host), file loading/saving via the GitHub Contents API, and the app shell (header, status messages, confirm bar). The `editor/dist/` directory contains pre-built artifacts that are committed and copied into content repos' `docs/editor/` during the Python build. Rebuild with:
+The editor SPA handles auth (PAT + host), file loading/saving via the GitHub Contents API, and the app shell (header, status messages, confirm bar). The `editor/dist/` directory is gitignored; the buildserver rebuilds it on demand with hash-based caching. For local builds:
 
 ```bash
 cd editor && npm ci && npm run build
 ```
-
-**Important**: GitHub Actions does NOT rebuild the editor JS. If you change `editor/src/`, you must rebuild locally and commit the updated `dist/`.
 
 ## Directory Structure
 
@@ -202,7 +200,7 @@ metabrowse/
 │   └── style.css         # Shared stylesheet
 ├── editor/               # Editor SPA (uses veditor.web at runtime)
 │   ├── src/              # TypeScript source
-│   └── dist/             # Pre-built output (committed)
+│   └── dist/             # Built output (gitignored, built on demand)
 ├── parser.py             # Stage 1: Extract links/groups
 ├── transformer.py        # Stage 2: Generate targets, prepare HTML data
 ├── generator.py          # Stage 3: Render templates
@@ -214,7 +212,7 @@ metabrowse/
 ├── requirements.txt      # Python dependencies
 └── editor/               # Browser-based editor SPA
     ├── src/              # TypeScript source (CodeMirror + vim via veditor.web)
-    ├── dist/             # Built output (committed to repo)
+    ├── dist/             # Built output (gitignored, built on demand)
     ├── package.json      # Editor npm dependencies
     └── vite.config.ts    # Vite build config
 ```

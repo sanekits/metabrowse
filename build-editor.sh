@@ -2,8 +2,7 @@
 # build-editor.sh - Build the metabrowse editor SPA
 #
 # Run this after making changes to editor/ source files.
-# The built output in editor/dist/ must be committed to this repo
-# so that Jenkins can deploy it without needing Node.js.
+# The buildserver rebuilds editor/dist/ on demand; it is not committed to git.
 #
 # The DEFAULT_HOST is injected at build time via VITE_DEFAULT_HOST environment variable.
 # If not set, defaults to 'github.com' (public GitHub).
