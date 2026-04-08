@@ -3,8 +3,9 @@ import { validateToken, getFileContent, updateFileContent, DEFAULT_HOST } from '
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
 
-// veditor base URL — override via VITE_VEDITOR_BASE for GHES or local dev.
-const VEDITOR_BASE = import.meta.env.VITE_VEDITOR_BASE || 'https://stabledog.github.io/veditor.web';
+// veditor base URL — must be set via VITE_VEDITOR_BASE at build time.
+const VEDITOR_BASE = import.meta.env.VITE_VEDITOR_BASE as string | undefined;
+if (!VEDITOR_BASE) throw new Error('VITE_VEDITOR_BASE not set at build time');
 
 // veditor API — populated by init() before use.
 let veditor: typeof import('./veditor');

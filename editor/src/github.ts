@@ -1,4 +1,6 @@
-export const DEFAULT_HOST = import.meta.env.VITE_DEFAULT_HOST || 'github.com';
+const _host = import.meta.env.VITE_DEFAULT_HOST as string | undefined;
+if (!_host) throw new Error('VITE_DEFAULT_HOST not set at build time');
+export const DEFAULT_HOST = _host;
 
 function apiBase(host: string): string {
   if (host === 'github.com') return 'https://api.github.com';
