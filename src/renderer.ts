@@ -1,0 +1,312 @@
+/** Renderer: Build DOM from transformed HTMLDocument, replicating the Jinja2 template structure. */
+
+import type { HTMLDocument, HTMLLink, HTMLGroup, HTMLLinkGroup, HTMLSection } from './transformer.ts';
+import type { Route } from './router.ts';
+
+export interface RenderConfig {
+  contentPaths: string[];
+  owner: string;
+  repo: string;
+  host: string;
+}
+
+/** Format a directory name for display: replace [-_] with spaces, title-case. */
+function formatDirName(name: string): string {
+  return name
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/** Get child directory paths (immediate children only). */
+function getChildDirs(dirPath: string, contentPaths: string[]): string[] {
+  return contentPaths.filter(p => {
+    if (!dirPath) return p !== '' && !p.includes('/');
+    return p.startsWith(dirPath + '/') && !p.slice(dirPath.length + 1).includes('/');
+  }).sort();
+}
+
+/** Build breadcrumb data from a route path. */
+function buildBreadcrumbs(dirPath: string): Array<{ name: string; hash: string }> {
+  if (!dirPath) return [];
+  const parts = dirPath.split('/');
+  const crumbs: Array<{ name: string; hash: string }> = [];
+  for (let i = 0; i < parts.length - 1; i++) {
+    const path = parts.slice(0, i + 1).join('/');
+    crumbs.push({ name: formatDirName(parts[i]), hash: `#/${path}` });
+  }
+  return crumbs;
+}
+
+// ── DOM helpers ─────────────────────────────────────────────────────
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  attrs?: Record<string, string>,
+  ...children: Array<Node | string>
+): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tag);
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      element.setAttribute(k, v);
+    }
+  }
+  for (const child of children) {
+    if (typeof child === 'string') {
+      element.appendChild(document.createTextNode(child));
+    } else {
+      element.appendChild(child);
+    }
+  }
+  return element;
+}
+
+// ── Copy-to-clipboard ───────────────────────────────────────────────
+
+function setupCopyHandler(container: HTMLElement): void {
+  container.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.copy-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const url = btn.getAttribute('data-url');
+    if (!url) return;
+    // Resolve relative URLs to absolute
+    const a = document.createElement('a');
+    a.href = url;
+    navigator.clipboard.writeText(a.href).then(() => {
+      btn.textContent = '\u2705';
+      setTimeout(() => { btn.textContent = '\uD83D\uDCCB'; }, 1500);
+    });
+  });
+}
+
+// ── Link rendering ──────────────────────────────────────────────────
+
+function renderLink(link: HTMLLink): HTMLLIElement {
+  const li = el('li');
+
+  if (link.rawHtml) {
+    // HTML pass-through
+    const span = document.createElement('span');
+    span.innerHTML = link.rawHtml;
+    li.appendChild(span);
+  } else {
+    // Favicon placeholder (Phase 4 will load these)
+    if (link.urlHash) {
+      li.appendChild(el('img', {
+        src: '', alt: '', class: 'link-favicon',
+        'data-link-url': link.url,
+        'data-url-hash': link.urlHash,
+      }));
+    }
+    li.appendChild(el('a', { href: link.url, target: link.target }, link.text));
+  }
+
+  // Copy button
+  li.appendChild(el('button', {
+    class: 'copy-btn', 'data-url': link.url, title: 'Copy URL',
+  }, '\uD83D\uDCCB'));
+
+  // Comment
+  if (link.comment) {
+    li.appendChild(el('span', { class: 'link-comment' }, '\u2139 ' + link.comment));
+  }
+
+  return li;
+}
+
+// ── Group rendering ─────────────────────────────────────────────────
+
+function renderGroup(group: HTMLGroup): HTMLDivElement {
+  const div = el('div', { class: 'subgroup' });
+
+  const header = el('div', { class: 'subgroup-header' }, group.name);
+  if (group.comment) {
+    header.appendChild(el('span', { class: 'group-comment' }, '\u2139 ' + group.comment));
+  }
+  div.appendChild(header);
+
+  const ul = el('ul', { class: 'group-links' });
+  for (const link of group.links) {
+    ul.appendChild(renderLink(link));
+  }
+  div.appendChild(ul);
+
+  return div;
+}
+
+// ── Link group rendering ────────────────────────────────────────────
+
+function renderLinkGroup(linkGroup: HTMLLinkGroup): HTMLUListElement {
+  const ul = el('ul', { class: 'links' });
+  for (const link of linkGroup.links) {
+    ul.appendChild(renderLink(link));
+  }
+  return ul;
+}
+
+// ── Section rendering ───────────────────────────────────────────────
+
+function renderSection(section: HTMLSection): HTMLDetailsElement {
+  const details = document.createElement('details');
+  details.className = 'section';
+  details.open = true;
+
+  const summary = el('summary', {}, section.name);
+  if (section.comment) {
+    summary.appendChild(el('span', { class: 'section-comment' }, '\u2139 ' + section.comment));
+  }
+  details.appendChild(summary);
+
+  const content = el('div', { class: 'section-content' });
+  for (const item of section.items) {
+    content.appendChild(renderSubitem(item));
+  }
+  details.appendChild(content);
+
+  return details;
+}
+
+// ── Subitem dispatch ────────────────────────────────────────────────
+
+function renderSubitem(item: HTMLGroup | HTMLLinkGroup | HTMLSection): HTMLElement {
+  switch (item.type) {
+    case 'group': return renderGroup(item);
+    case 'link_group': return renderLinkGroup(item);
+    case 'section': return renderSection(item);
+  }
+}
+
+// ── Children nav ────────────────────────────────────────────────────
+
+function renderChildren(dirPath: string, contentPaths: string[]): HTMLDivElement | null {
+  const childDirs = getChildDirs(dirPath, contentPaths);
+  if (childDirs.length === 0) return null;
+
+  const nav = el('div', { class: 'children-nav' });
+  for (const dir of childDirs) {
+    const name = formatDirName(dir.split('/').pop()!);
+    const hash = `#/${dir}`;
+    const wrap = el('span', { class: 'child-link-wrap' });
+    wrap.appendChild(el('a', { href: hash, class: 'child-link', target: '_self' }, name));
+    wrap.appendChild(el('button', {
+      class: 'copy-btn child-copy-btn', 'data-url': hash, title: 'Copy URL',
+    }, '\uD83D\uDCCB'));
+    nav.appendChild(wrap);
+  }
+  return nav;
+}
+
+// ── Breadcrumbs ─────────────────────────────────────────────────────
+
+function renderBreadcrumbsEl(dirPath: string): HTMLHeadingElement {
+  const h1 = el('h1', { class: 'breadcrumbs' });
+
+  // Always add "Metabrowse" as root link
+  h1.appendChild(el('a', { href: '#/', class: 'breadcrumb-link', target: '_self' }, 'Metabrowse'));
+
+  if (dirPath) {
+    const crumbs = buildBreadcrumbs(dirPath);
+    for (const crumb of crumbs) {
+      h1.appendChild(el('span', { class: 'breadcrumb-separator' }, '/'));
+      h1.appendChild(el('a', { href: crumb.hash, class: 'breadcrumb-link', target: '_self' }, crumb.name));
+    }
+    // Current page name
+    const currentName = formatDirName(dirPath.split('/').pop()!);
+    h1.appendChild(el('span', { class: 'breadcrumb-separator' }, '/'));
+    h1.appendChild(el('span', { class: 'breadcrumb-current' }, currentName));
+  } else {
+    // Root page — "Metabrowse" is the current page, make it bold
+    // Remove the link we just added and replace with current
+    h1.innerHTML = '';
+    h1.appendChild(el('span', { class: 'breadcrumb-current' }, 'Metabrowse'));
+  }
+
+  return h1;
+}
+
+// ── Main page render ────────────────────────────────────────────────
+
+export function renderPage(
+  target: HTMLElement,
+  doc: HTMLDocument,
+  route: Route,
+  config: RenderConfig,
+): void {
+  target.innerHTML = '';
+
+  const container = el('div', { class: 'container' });
+
+  // Fixed header
+  const fixedHeader = el('div', { class: 'fixed-header' });
+
+  // Header bar with breadcrumbs + edit link
+  const headerBar = el('div', { class: 'header-bar' });
+  headerBar.appendChild(renderBreadcrumbsEl(route.dirPath));
+
+  const editHash = route.dirPath ? `#/edit/${route.dirPath}` : '#/edit/';
+  const editLink = el('a', { href: editHash, class: 'edit-link' }, 'Edit');
+  editLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open(editHash, '_blank');
+  });
+  headerBar.appendChild(editLink);
+
+  fixedHeader.appendChild(headerBar);
+
+  // Search bar
+  const searchBar = el('div', { class: 'search-bar', role: 'search' });
+  searchBar.appendChild(el('span', { class: 'search-icon' }, '\uD83D\uDD0D'));
+  searchBar.appendChild(el('input', {
+    type: 'text', id: 'unified-search', class: 'search-input',
+    placeholder: '/ (this page) | ^K (global)',
+    'aria-label': 'Search',
+  }));
+  const clearBtn = el('button', {
+    type: 'button', id: 'clear-search-btn', class: 'clear-search-btn',
+    title: 'Clear search', style: 'display:none',
+  }, '\u00D7');
+  searchBar.appendChild(clearBtn);
+  const modeLabel = el('label', { class: 'search-mode-toggle' });
+  const modeCheckbox = el('input', { type: 'checkbox', id: 'global-mode-checkbox' });
+  (modeCheckbox as HTMLInputElement).checked = true;
+  modeLabel.appendChild(modeCheckbox);
+  modeLabel.appendChild(el('span', {}, 'Global'));
+  searchBar.appendChild(modeLabel);
+  fixedHeader.appendChild(searchBar);
+
+  container.appendChild(fixedHeader);
+
+  // Scrollable content
+  const scrollable = el('div', { class: 'scrollable-content' });
+
+  // Global search results panel
+  const resultsPanel = el('div', { id: 'search-results-panel', class: 'search-results-panel', style: 'display:none' });
+  resultsPanel.appendChild(el('div', { id: 'search-results-content', class: 'search-results' }));
+  scrollable.appendChild(resultsPanel);
+
+  // Children navigation
+  const childrenNav = renderChildren(route.dirPath, config.contentPaths);
+  if (childrenNav) scrollable.appendChild(childrenNav);
+
+  // Render document items
+  for (const item of doc.items) {
+    scrollable.appendChild(renderSubitem(item));
+  }
+
+  container.appendChild(scrollable);
+  target.appendChild(container);
+
+  // Footer
+  const footer = document.createElement('footer');
+  footer.className = 'shortcut-help';
+  footer.innerHTML = [
+    '<kbd>e</kbd> Edit',
+    '<kbd>/</kbd> Search page',
+    '<kbd>Ctrl+K</kbd> Search all',
+    '<kbd>c</kbd> Collapse/restore',
+    '<kbd>r</kbd> Reload',
+  ].join('<span class="shortcut-sep">|</span>');
+  target.appendChild(footer);
+
+  // Wire up copy-to-clipboard
+  setupCopyHandler(target);
+}

@@ -1,0 +1,87 @@
+# Title: BB Data Courses
+
+- https://spaces.dx.bloomberg.com/#creating-workspace
+- Canon
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/data-flow-architecture/data-flow-architecture/#/data-flow-architecture
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/1
+- BBDS
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/bbds-wheres-wally/issues/2
+  - https://chatgpt.com/g/g-682614fc70dc8191aa8d07ba163fc79e-bbds-guide
+  - https://bbgithub.dev.bloomberg.com/data-training/bbds
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/bbds/pragmatic-bbds/?showNotes=1#/pragmatic-bbds
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/bbds/overviews/pragmatic-bbds/lab/
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/bbds-wheres-wally/blob/teach-patch/me/README.md
+  - https://cms.prod.bloomberg.com/team/spaces/entities/pages/462302948/BBDS+Guide#BBDSGuide-Types
+  - https://bait-admin.dev.bloomberg.com/docs/overview
+  - https://cms.prod.bloomberg.com/team/spaces/entities/pages/419783223/BBDS+Getting+Started
+  - https://bms.prod.bloomberg.com/services/iam-role/instances/details/TrainingJourneysLM5513
+- DTP
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/2
+  - https://spaces-docker-pw3-168.dxspda.pw3.bcc.bloomberg.com:8611/webide/?folder=%2Fworkarea%2Fdtp-point-on-land
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/dtp-point-on-land/tree/main
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/dtp/pragmatic-dtp/#/pragmatic-dtp
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/dtp/PR-28/overviews/pragmatic-dtp/lab/
+  - https://bbgithub.dev.bloomberg.com/training-assets/guts-project-harness/pull/27/files/9d06521d7c9dd8d8511ca48dc81649e83f3c0dff..0f311fb07645ca71c990758ea789ece48dee469e
+  - https://chatgpt.com/g/g-683cc2fcb3288191a84904316411af0b-dtp-learning-assistant
+  - https://tutti.prod.bloomberg.com/dtp/dtp/tutorials/deploying-a-service#step-1-register-a-microservice
+  - https://bbgithub.dev.bloomberg.com/mvalle31-org/dtp-point-on-land
+  - https://dtp.dev.bloomberg.com/
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/dtp-point-on-land/tree/main
+- BRE
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/3
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/bre/introduction/#/introduction-to-bre
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/bre/overviews/pragmatic-bre/lab/
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/bre-energy-assets
+  - https://bbgithub.dev.bloomberg.com/data-training/bre
+  - https://dfr.dev.bloomberg.com/#/recipe-dashboard/training-quakes-LM5513b
+  - https://bbgithub.dev.bloomberg.com/data-training/bre/blob/main/overviews/pragmatic-bre/copilot.md#step-3-teach-github-copilot-about-bre
+  - https://tutti.prod.bloomberg.com/dqc/bre/bre
+  - https://bbgithub.dev.bloomberg.com/data-training/bre/tree/main/trainer-notes
+  - https://chatgpt.com/g/g-68557413368c819191922716ff087af2-bre-learning-assistant
+  - https://devise.dx.bloomberg.com/repository/TRAININGMLOPEZ425DTPPOINTONLAND?tab=dashboard
+- DFR
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/5
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/dfr/pragmatic-dfr/#/pragmatic-dfr
+  - https://tutti.prod.bloomberg.com/dfr/ingredients
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/data-flow-pipeline/overviews/earthquakes-data-pipeline/delta/
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/dsp/overviews/pragmatic-dsp/lab/bbgithub-integration/
+  - https://bait-admin.dev.bloomberg.com/docs/transformer/operations
+  - https://dfr.dev.bloomberg.com/#/recipe-dashboard/training-quakes-LM5513b
+  - https://humio.prod.bloomberg.com/baitsvc/search?query=%23parentCluster%20%3D%20%22dtp%22%20%7C%20%22a5f15501f73456922ac268895aa49a21-7c21e4a761426f9b%22%20%7C%20parseJson(%40rawstring)%20%7C%20eval(msg%3Dconcat(%5Bmessage%2CexcTrace%5D))%20%7C%20table(%5B%40timestamp%2C%20name%2C%20version%2C%20level%2C%20msg%5D%2C%20limit%3D200%2C%20sortby%3DlogSeqNum%2C%20order%3Dasc)%20&start=1764791358525&end=1764792558525&live=false&fullscreen=false&widgetType=table-view
+  - https://dtp.dev.bloomberg.com/#/sandbox
+  - https://dtp.dev.bloomberg.com/#/dtqc/cef58f3ab3943220d1bf0aa48dc6d17a-965739f055c21258
+  - https://dfr.dev.bloomberg.com/#/recipe-dashboard/training-quakes-LM5513b
+  - https://chatgpt.com/g/g-6855b3060a4c8191bb7bb18a1883f7eb-bait-helper
+- Dec3.2025 BRE, DFR
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/3
+  - https://chatgpt.com/share/e/690baad0-e4f0-8006-badf-49f214059d1e
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/5
+- Additional content
+  - https://avro.apache.org/docs/++version++/specification/
+  - https://avro.apache.org/docs/
+  - https://cms.prod.bloomberg.com/team/pages/viewpage.action?pageId=2176991393&spaceKey=entities&title=BBDS%2BLimits
+  - https://bbgithub.dev.bloomberg.com/GlobalDataTechOps/dtp-guidelines
+  - https://mediaspace.blpvideohub.com/media/0_9qut93c4
+  - https://cms.prod.bloomberg.com/team/pages/viewpage.action?pageId=507549143&spaceKey=entities&title=BBDS%2BServices
+  - https://bsso.blpprofessional.com/idp/SSO.saml2?SAMLRequest=nVPLbtswEPwVgXfrlbqJCduBa6OogbQRLLWHXAqKXDkE%2BFC5VOL%2BfSnZan1oHMAnAbvDmd2Z1fz%2BoFX0Ag6lNQuSxSm5X86RadXSVeefzQ5%2BdYA%2BCjCDdGgsSOcMtQwlUsM0IPWclquvDzSPU9o66y23ikTbzYL8bNJp3cy4%2BHB7w4DnM%2FFxlpHoxygYXgQgYgdbg54ZH0ppPp1k6SS%2FrbI7mt%2FR6SyeZjdPJCpO1J%2BkEdLsL89RH0FIv1RVMSkey4pEm7CJNMwP0s%2Fet0iTpEa0ca3aMHgD2I%2FFVMytTqRok7J8jPulcxKtEMH1T9fWYKfBleBeJIfvu4d%2FZKJxcSASgdBaXYPbD1TYJsrupSFHb%2BmwsTsz9fIubJQmy%2FeFNHgmmGfz5ExqzPRb4N5uCqsk%2F31Npp%2Bt08y%2Fjc7ibKhIMWkGKO0MtsBlI0EED5Wyr2sHzMOCeNcBScbJTocGYji74LGHw1Vnt7a6ZU5inzEcGPej6efEaxU83UFzTQQXYZzynjqUi%2FB5tU70Vws8LFY5Frywzp%2BS%2Bd88y2PvDTv%2Bds9%2FzeUf&RelayState=%23%2F
+  - https://bait-admin.dev.bloomberg.com/docs/overview
+- DSP
+  - https://bbgithub.dev.bloomberg.com/pages/data-training/dsp/pragmatic-dsp/#/pragmatic-dsp
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/dsp-integrations-lab
+- Nov26.2025 DTP
+  - https://bbgithub.dev.bloomberg.com/lmatheson4/bb-data-courses/issues/2
+  - https://bloomberglp.csod.com/LMS/ILT/NewUI/parent_event_session_roster.aspx?loId=b5fa30a1-0ee3-44b7-922f-6eb4f94f9563&back=INSTRUCTOR
+- Nov26.2025 BBDS
+  - https://bloomberglp.csod.com/LMS/ILT/NewUI/parent_event_session_roster.aspx?loId=cb0fef67-1887-4ca3-ad95-74730715783e&back=INSTRUCTOR
+  - https://spaces-docker-pw3-168.dxspda.pw3.bcc.bloomberg.com:8739/webide/?folder=%2Fworkarea%2Fbbds-wheres-wally
+  - https://bbgithub.dev.bloomberg.com/training-lmatheson4/bbds-wheres-wally/issues/2
+- Aug18.2025 Delta shadowing
+  - https://docs.google.com/spreadsheets/d/1OHrUYFDUo6Goy5JXefK2ZyYFQMT_kVBetXvLEDIIphk/edit?gid=280985571#gid=280985571
+  - https://bbgithub.dev.bloomberg.com/org-lmatheson4/DeltaNotes/tree/main
+- https://dfr.dev.bloomberg.com/#/edit-recipe/5513clone-b/bait_transformer
+- https://dfr.dev.bloomberg.com/#/recipe-dashboard/training-quakes-sl5208
+- https://dtp.dev.bloomberg.com/#/dtqc/33e163a4ea764e70996de23fd92f0427-55e75f1c850f22e9/33e163a4ea764e70996de23fd92f0427-281f7599a07396cf/logs
+- https://humio.prod.bloomberg.com/baitsvc/search?query=%23parentCluster%20%3D%20%22dtp%22%20%7C%20%2233e163a4ea764e70996de23fd92f0427-281f7599a07396cf%22%20%7C%20parseJson(%40rawstring)%20%7C%20eval(msg%3Dconcat(%5Bmessage%2CexcTrace%5D))%20%7C%20table(%5B%40timestamp%2C%20name%2C%20version%2C%20level%2C%20msg%5D%2C%20limit%3D200%2C%20sortby%3DlogSeqNum%2C%20order%3Dasc)%20&start=1764795303937&end=1764796503937&live=false&fullscreen=false&widgetType=table-view
+- https://bsso.blpprofessional.com/as/Ly8aUmAYwF/resume/as/authorization.ping
+- https://v6.dev.bloomberg.com/v1/webapi/oidc/callback?code=d8de0D6l6--yoGVewnAeQudN95zT5A-vgOEAAAAf&state=c16f021b3dd2fbb45a585f617aaa4d03

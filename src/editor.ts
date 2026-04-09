@@ -1,0 +1,141 @@
+/** Editor view: loads veditor.web, fetches file, handles save. */
+
+import { getFileContent, updateFileContent } from './github.ts';
+
+// veditor base URL — must be set via VITE_VEDITOR_BASE at build time.
+const VEDITOR_BASE = import.meta.env.VITE_VEDITOR_BASE as string | undefined;
+
+// veditor API — populated on first use.
+let veditor: typeof import('./veditor.d.ts') | null = null;
+let veditorCssLoaded = false;
+
+async function loadVeditor(): Promise<typeof import('./veditor.d.ts')> {
+  if (veditor) return veditor;
+
+  if (!VEDITOR_BASE) {
+    throw new Error('VITE_VEDITOR_BASE not set at build time');
+  }
+
+  // Load CSS once
+  if (!veditorCssLoaded) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `${VEDITOR_BASE}/veditor.css`;
+    document.head.appendChild(link);
+    veditorCssLoaded = true;
+  }
+
+  veditor = await import(/* @vite-ignore */ `${VEDITOR_BASE}/veditor.js`);
+  return veditor!;
+}
+
+function escapeHtml(s: string): string {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+/** Show the editor for a given content path. */
+export async function showEditor(
+  target: HTMLElement,
+  host: string,
+  token: string,
+  owner: string,
+  repo: string,
+  dirPath: string,
+): Promise<void> {
+  const contentPath = dirPath ? `text/${dirPath}/README.md` : 'text/README.md';
+
+  target.innerHTML = `<div class="editor-loading">Loading editor...</div>`;
+
+  // Load veditor + file in parallel
+  let ved: typeof import('./veditor.d.ts');
+  let content: string;
+  let sha: string;
+
+  try {
+    const [v, file] = await Promise.all([
+      loadVeditor(),
+      getFileContent(host, token, owner, repo, contentPath),
+    ]);
+    ved = v;
+    content = file.content;
+    sha = file.sha;
+  } catch (err) {
+    target.innerHTML = `
+      <div class="editor-loading" style="flex-direction:column;gap:1rem;">
+        <div style="color:#f38ba8;">Failed to load editor</div>
+        <div style="font-size:0.85rem;">${escapeHtml(err instanceof Error ? err.message : String(err))}</div>
+      </div>
+    `;
+    return;
+  }
+
+  let originalContent = content;
+  let fileSha = sha;
+
+  // Render editor UI
+  target.innerHTML = `
+    <div class="editor-screen">
+      <header>
+        <span class="filename">${escapeHtml(contentPath)}</span>
+        <span id="status-msg"></span>
+      </header>
+      <div id="editor-container"></div>
+    </div>
+  `;
+
+  function showStatus(msg: string, isError = false): void {
+    const el = document.getElementById('status-msg');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = isError ? 'error' : 'success';
+    if (!isError) {
+      setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 2000);
+    }
+  }
+
+  async function handleSave(): Promise<void> {
+    const currentContent = ved.getEditorContent();
+    if (currentContent === originalContent) {
+      showStatus('No changes');
+      return;
+    }
+
+    const filename = contentPath.split('/').pop() ?? contentPath;
+    const message = `Update ${filename} via metabrowse editor`;
+
+    try {
+      showStatus('Saving...');
+      const newSha = await updateFileContent(
+        host, token, owner, repo, contentPath,
+        currentContent, fileSha, message,
+      );
+      originalContent = currentContent;
+      fileSha = newSha;
+      showStatus('Saved');
+
+      // Refresh the opener page to pick up changes
+      try {
+        window.opener?.location.reload();
+      } catch {
+        // Cross-origin or no opener — ignore
+      }
+    } catch (err) {
+      showStatus(`Save failed: ${err instanceof Error ? err.message : err}`, true);
+    }
+  }
+
+  function handleQuit(): void {
+    window.close();
+    // If window.close() is blocked, show message
+    setTimeout(() => { showStatus('You can close this tab.'); }, 100);
+  }
+
+  ved.createEditor(document.getElementById('editor-container')!, originalContent, {
+    onSave: handleSave,
+    onQuit: handleQuit,
+  }, {
+    storagePrefix: 'metabrowse',
+  });
+}

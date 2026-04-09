@@ -1,61 +1,74 @@
 # Metabrowse
 
-A markdown-to-HTML static site generator for teaching materials with collapsible link groups and browser tab reuse.
+A client-side SPA for browsing and editing personal link collections stored as markdown in GitHub repositories.
 
 ## Architecture
 
-Metabrowse separates **code** (this repository) from **content** (your link collections):
+Metabrowse is a **TypeScript/Vite SPA** deployed to GitHub Pages. It fetches markdown content from a separate GitHub repository at runtime via the GitHub API, parses and renders it in the browser. No build step is needed for content — push markdown, it's live immediately.
 
-- **Code repository** (this repo): Build scripts, parsers, templates
-- **Content repository** (separate): Your `text/` markdown files and generated `docs/` HTML
+- **This repo**: The SPA (parser, renderer, editor, search)
+- **Content repo** (separate): Just `text/` markdown files on `main` branch (e.g., `bb-metabrowse-links`)
+- **veditor.web** (shared): CodeMirror 6 + vim editor component, loaded at runtime from CDN
 
-This separation allows:
-- Multiple users to maintain their own link collections
-- Code updates without touching content
-- Content updates without needing build tool changes
+### Content repo structure
+
+```
+my-metabrowse-links/
+├── text/
+│   ├── README.md              # Root page
+│   ├── teach/
+│   │   ├── README.md          # Topic page
+│   │   └── CPP/
+│   │       └── README.md      # Nested topic
+│   └── tools/
+│       └── README.md
+└── (no build artifacts — the SPA reads text/ directly)
+```
 
 ## Quick Start
 
-### For Users (Working with Content)
-
-1. Create or clone your content repository:
-   ```bash
-   mkdir my-metabrowse-links
-   cd my-metabrowse-links
-   mkdir text
-   # Create your README.md files in text/
-   ```
-
-2. Build your site:
-   ```bash
-   /path/to/metabrowse/build-metabrowse.sh
-   ```
-
-### For Developers (Working with Code)
-
-This repository contains the build pipeline and a browser-based editor SPA:
-
-```
-metabrowse/
-├── templates/          # Jinja2 templates and CSS
-├── build.py            # Main build orchestrator
-├── parser.py           # Markdown parser
-├── transformer.py      # Data transformer
-├── generator.py        # HTML generator
-├── build-metabrowse.sh # User-facing build script
-├── build-editor.sh     # Build the editor SPA
-└── editor/             # Browser-based editor (TypeScript/Vite)
-    ├── src/            # Editor source code
-    ├── dist/           # Built editor (committed to repo)
-    └── package.json    # Editor npm dependencies
-```
-
-The **editor SPA** is a CodeMirror 6 + vim mode editor embedded in generated metabrowse pages for in-browser editing. It is built separately via `build-editor.sh` and the `editor/dist/` output is committed to this repo. The editor uses **veditor.web** as its shared editor component.
+### Local development
 
 ```bash
-# Build the editor (sets VITE_DEFAULT_HOST for GitHub API calls):
-VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com ./build-editor.sh
+npm install
+VITE_BASE=/ npm run dev
 ```
+
+Open in browser, enter your GitHub host, content owner/repo, and PAT on the auth screen.
+
+### Deploy to GHES
+
+From the parent workspace:
+```bash
+make deploy-metabrowse
+```
+
+Or manually:
+```bash
+VITE_BASE=/pages/training-lmatheson4/metabrowse/ \
+VITE_VEDITOR_BASE=https://bbgithub.dev.bloomberg.com/pages/lmatheson4/veditor.web/ \
+VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com \
+npm run build
+
+npx gh-pages -d dist
+```
+
+### Deploy to public GitHub
+
+Push to `main` — GitHub Actions builds and deploys to gh-pages automatically.
+
+## Features
+
+- **No content build step**: Push markdown, see changes immediately
+- **Collapsible sections**: `## Section Name` creates expandable `<details>` blocks
+- **Groups**: Non-URL `- ` lines create sub-groups with their indented links
+- **Browser tab reuse**: External URLs get deterministic hash-based targets
+- **In-browser editor**: Click "Edit" (or press `e`) to edit content with vim keybindings via veditor.web
+- **Search**: Local in-page filter (`/`) and global cross-page search (`Ctrl+K`)
+- **Favicons**: Auto-loaded for http/https links with localStorage caching
+- **Keyboard shortcuts**: `/` search, `Ctrl+K` global search, `e` edit, `c` collapse/restore, `r` reload
+- **Hash routing**: `#/teach/CPP` maps to `text/teach/CPP/README.md`
+- **PAT authentication**: Required — content repos are private
 
 ## Markdown Syntax
 
@@ -67,74 +80,83 @@ VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com ./build-editor.sh
 - [Link text](https://example.com)
 - [Link text](https://example.com){target="_custom"}
 - <a href="https://example.com">Raw HTML</a>
+- chrome://settings
+- mailto:user@example.com
 ```
 
-### Groups (Collapsible Sections)
+### Comments
+
+```markdown
+- https://example.com # This comment appears below the link
+- Group Name # Comments work on groups too
+```
+
+### Sections (collapsible)
+
+```markdown
+## Section Name
+- https://link1.com
+- https://link2.com
+```
+
+### Groups (non-collapsible)
 
 ```markdown
 - Group Name
   - https://link1.com
   - https://link2.com
-  - Another link https://link3.com
 ```
 
-Groups are created automatically when a line starts with `- ` but contains no URL.
+Groups are created when a `- ` line contains no URL. Indented lines below become children.
 
-## Features
+## Project Structure
 
-- **Collapsible groups**: Organize links into expandable sections
-- **Browser tab reuse**: Each unique URL gets a deterministic target attribute
-- **Multiple link formats**: Plain URLs, markdown links, HTML pass-through
-- **Custom targets**: Override default targets with `{target="..."}` syntax
-- **GitHub Pages ready**: Outputs to `docs/` for local testing; typically deployed to `gh-pages` branch via CI/CD
+```
+metabrowse/
+├── src/
+│   ├── main.ts          # Entry point
+│   ├── app.ts           # Auth, data flow, routing
+│   ├── github.ts        # GitHub API (Trees + Contents)
+│   ├── parser.ts        # Markdown → structured data
+│   ├── transformer.ts   # Structured data → HTML-ready data
+│   ├── renderer.ts      # DOM construction
+│   ├── search.ts        # Local filter + global search
+│   ├── favicon.ts       # Favicon loading + caching
+│   ├── keyboard.ts      # Keyboard shortcuts
+│   ├── editor.ts        # Editor view (veditor.web)
+│   ├── cache.ts         # localStorage caching
+│   ├── router.ts        # Hash-based routing
+│   ├── veditor.d.ts     # veditor.web type declarations
+│   └── style.css        # All styles
+├── src/__tests__/       # Vitest tests
+├── public/              # Favicon assets
+├── index.html           # SPA entry point
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── .github/workflows/
+    └── deploy.yml       # Public GitHub Pages deploy
+```
 
-## Building
+## Environment Variables
 
-The `build-metabrowse.sh` script processes all `README.md` files in the content repository's `text/` directory and generates corresponding `index.html` files in `docs/`.
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `VITE_BASE` | URL base path for deployment | Yes (build + dev) |
+| `VITE_VEDITOR_BASE` | CDN URL for veditor.web | For editor functionality |
+| `VITE_DEFAULT_HOST` | Default GitHub host | No (defaults to github.com) |
 
-**Usage:**
+Content owner and repo are configured on the auth screen and stored in localStorage.
+
+## Testing
+
 ```bash
-# Run from your content directory
-cd my-metabrowse-links
-/path/to/metabrowse/build-metabrowse.sh
+VITE_BASE=/ npm test        # Run tests
+VITE_BASE=/ npm run test:watch  # Watch mode
+npx tsc --noEmit            # Type check
 ```
-
-**Environment Variables:**
-- `METABROWSE_CODE_DIR`: Override code repository location (default: script directory)
-- `METABROWSE_PYTHON`: Override Python interpreter (default: `~/.local/bin/python3`)
-
-**Direct Python invocation** (for development):
-```bash
-# Must be in content directory with text/ and docs/
-~/.local/bin/python3 /path/to/metabrowse/build.py
-```
-
-## Local Testing
-
-After building, preview the generated site locally with the built-in web server:
-
-```bash
-# Run from your content directory (containing docs/)
-cd my-metabrowse-links
-/path/to/metabrowse/serve-metabrowse.sh
-
-# Visit http://localhost:3000 in your browser
-# Press Ctrl+C to stop the server
-```
-
-**Custom port:**
-```bash
-# Use -p flag or METABROWSE_PORT environment variable
-/path/to/metabrowse/serve-metabrowse.sh -p 8080
-```
-
-**Note:** The `docs/` directory is for local testing only and is typically gitignored. Production deployments use GitHub Actions to build and deploy to the `gh-pages` branch.
 
 ## Requirements
 
-- Python 3.6+
-- jinja2 (install with: `~/.local/bin/python3 -m pip install jinja2`)
-
-## Implementation Details
-
-See [DRAFT-SPEC.md](DRAFT-SPEC.md) for the complete specification.
+- Node.js 20+
+- npm

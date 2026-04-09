@@ -23,3 +23,5 @@ build/
 Thumbs.db
 .claude
 editor/.build-stamp
+node_modules
+package-lock.json
