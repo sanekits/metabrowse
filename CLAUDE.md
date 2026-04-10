@@ -4,333 +4,178 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Metabrowse is a markdown-to-HTML static site generator designed for teaching materials.
+Metabrowse is a browser-side single-page application (SPA) for organizing and browsing bookmarks. It fetches markdown content from a GitHub repository at runtime via the GitHub API, parses it in the browser, and renders interactive HTML with collapsible groups, search, and inline editing.
 
 **Architecture**: Code and content are separated into different repositories:
-- **Code repository** (this repo): Build pipeline, parsers, transformers, templates
-- **Content repositories**: User's `text/` markdown files; `docs/` is a local build artifact (gitignored), deployed to `gh-pages` branch via GitHub Actions
+- **Code repository** (this repo): TypeScript SPA built with Vite, deployed to GitHub Pages
+- **Content repositories** (e.g., `metabrowse-links`): Contain `text/` directories with markdown files. No build step — the SPA reads them directly via the GitHub Contents API.
 
-The build script (`build-metabrowse.sh`) is run from a content directory and invokes the build pipeline to convert README.md files in `text/` to HTML in `docs/` with these key features:
-1. **Collapsible link groups** - organize links into expandable sections
-2. **Smart tab behavior** - distinguishes between navigation and content:
-   - External URLs (http/https) get deterministic hash-based targets for tab reuse
-   - Internal navigation links stay in the same tab (target="_self")
-3. **Multi-level hierarchy** - supports unlimited directory nesting (e.g., `text/course/topic/subtopic/README.md`)
-4. **Clickable breadcrumb navigation** - displays full path with each segment clickable
-   - Example: "Metabrowse / Calcrt / Basics" where "Metabrowse" and "Calcrt" are links
-   - Current page shown in bold, not clickable
-5. **Auto-generated child navigation** - automatically detects and displays child directories with README.md files
-   - Displayed as horizontal buttons with wrapping support
-   - Sorted alphabetically, directory names formatted with title case
-6. **Favicon support** - automatically copies `text/favicon.png` to `docs/` and links it in all pages
-7. **Edit links** - "Edit" button on every page links to source README.md in the git web interface
-   - Configured via `.metabrowse.conf` file in content repo root
-   - Set `EDIT_BASE_URL=https://your-git-host.com/org/repo/blob/main` to enable
-   - Opens in new tab to preserve navigation state
-8. **Inline comments** - add `# comment text` to any link or group for context
-   - Displayed as small gray italic text below the link/group
-   - Plain text only, no markup interpretation
-9. **Unified search** - single search box with local/global mode toggle:
-   - **Global mode** (default): searches across all pages using build-time JSON index, results shown in dropdown panel below search box
-   - **Local mode**: filters current page content (links, groups, child buttons) in-place
-   - Toggle between modes with checkbox, or use keyboard shortcuts: `/` for local, `Ctrl+K` for global
-   - Search term and mode persist across page navigations via localStorage
-   - Clear button (×) appears when search has content
-
-## Configuration
-
-**Edit links setup** (enable "Edit" buttons on pages):
-
-Create `.metabrowse.conf` in your content repository root:
-```bash
-# .metabrowse.conf
-EDIT_BASE_URL=https://github.com/your-org/your-repo/blob/main
-```
-
-Replace the URL with your git hosting service URL pattern. Common examples:
-- **GitHub**: `https://github.com/org/repo/blob/main`
-- **GitLab**: `https://gitlab.com/org/repo/-/blob/main`
-- **Gitea**: `https://gitea.example.com/org/repo/src/branch/main`
-
-The build will append `/text/{path}/README.md` to generate edit URLs.
+Key features:
+1. **Collapsible link groups** - organize links into expandable `<details>` sections
+2. **Smart tab reuse** - deterministic SHA256-based targets for external URLs; internal navigation stays in the same tab
+3. **Multi-level hierarchy** - client-side hash router maps paths like `#/topic/subtopic` to `text/topic/subtopic/README.md`
+4. **Clickable breadcrumb navigation** - generated from the current hash path
+5. **Auto-generated child navigation** - discovers subdirectories via the GitHub Trees API
+6. **Inline editing** - launches veditor.web in a new tab to edit content files via the GitHub Contents API
+7. **Favicon fetching** - loads and caches favicons for external links
+8. **Unified search** - local in-page filter (`/` key) and global cross-page search (`Ctrl+K`)
+9. **Keyboard shortcuts** - `/` search, `Ctrl+K` global search, `e` edit, `c` collapse all, `r` reload
 
 ## Build Commands
 
-**Content setup** (creating directories with templates):
 ```bash
-cd /path/to/my-metabrowse-links
-/path/to/metabrowse/metabrowse-wiz.sh mkdir python-basics
-/path/to/metabrowse/metabrowse-wiz.sh mktree math/{algebra,geometry} science/physics
-```
-
-**User workflow** (from content directory):
-```bash
-cd /path/to/my-metabrowse-links
-/path/to/metabrowse/build-metabrowse.sh
-
-# Preview locally (optional - docs/ is gitignored, only for local testing)
-/path/to/metabrowse/serve-metabrowse.sh
-# Visit http://localhost:3000 to preview
-# Press Ctrl+C to stop server
-```
-
-**Developer workflow** (testing changes to build pipeline):
-```bash
-# From a content directory
-cd /path/to/test-content
-~/.local/bin/python3 /path/to/metabrowse/build.py
-
-# Preview locally
-/path/to/metabrowse/serve-metabrowse.sh -p 9000
-```
-
-**Dependencies:**
-```bash
-~/.local/bin/python3 -m pip install -r requirements.txt
-```
-
-**Building the editor SPA:**
-```bash
-# From this repo's root:
-VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com ./build-editor.sh
-
-# editor/dist/ is gitignored; the buildserver rebuilds it on demand
+cd metabrowse
+npm install                                    # First time only
+VITE_BASE=/ npm run dev                        # Dev server at http://localhost:3000
+VITE_BASE=/metabrowse/ npm run build           # Production build for GitHub Pages
+npm test                                       # Run vitest tests
+npm run test:watch                             # Watch mode
 ```
 
 **Environment variables:**
-- `METABROWSE_CODE_DIR`: Override location of code repository (default: directory containing build-metabrowse.sh)
-- `METABROWSE_PYTHON`: Override Python interpreter (default: `~/.local/bin/python3`)
-- `METABROWSE_PORT`: Port for local web server (default: 3000, used by serve-metabrowse.sh)
-- `VITE_DEFAULT_HOST`: GitHub host for editor SPA API calls (default: `github.com`)
-
-Note: This project uses `~/.local/bin/python3` as the default Python interpreter path.
+- `VITE_BASE` (required): Base path for deployment (e.g., `/metabrowse/` for GitHub Pages, `/` for local dev)
+- `VITE_VEDITOR_BASE`: Override veditor.web URL (default: `https://stabledog.github.io/veditor.web/`; required for GHES)
 
 ## Architecture
 
-The codebase implements a three-stage pipeline:
+The SPA implements a modular pipeline that runs entirely in the browser:
 
-### 1. Parser (`parser.py`)
-- Reads README.md files and extracts structured data
-- Uses regex patterns to identify different link formats:
-  - Plain URLs: `https://example.com`
-  - Markdown links: `[text](url)` or `[text](url){target="..."}`
-  - Raw HTML `<a>` tags (passed through unchanged)
-  - Title + URL: `Title text https://example.com`
-- Detects groups: lines starting with `- ` but containing no URL
-- Extracts comments: everything after `#` on the same line (via `_extract_comment()`)
-  - Handles URL fragments correctly by looking for `#` preceded by whitespace
-- Returns `ParsedDocument` containing ungrouped links and groups
+### Entry Point
+- **`main.ts`** (4 lines) — Imports CSS, calls `init()` from app.ts
 
-Key classes:
-- `Link`: Represents a single link with metadata (url, text, target, indent_level, comment)
-- `Group`: Represents a collapsible group with name, child links, and optional comment
-- `ParsedDocument`: Contains ungrouped_links and groups
+### App Shell (`app.ts`)
+- Orchestrates auth flow (GitHub PAT via localStorage), data fetching, and rendering
+- On each navigation: fetches README.md via GitHub API → parses → transforms → renders
+- Discovers child directories via the GitHub Trees API
 
-### 2. Transformer (`transformer.py`)
-- Converts parsed data to HTML-ready structures
-- **Critical feature**: Generates deterministic target names using SHA256 hash (first 8 chars)
-  - External URLs (http/https) get hash-based targets → enables tab reuse
-  - Internal/relative URLs get `target="_self"` → metabrowse navigation stays in same tab
-  - Explicit `{target="..."}` attributes override both behaviors
-- Returns `HTMLDocument` with title, ungrouped_links, and groups
+### Parser (`parser.ts`)
+- Extracts structured data (links, groups) from markdown text
+- Supports: plain URLs, markdown links, `{target="..."}` overrides, raw HTML `<a>` tags, title+URL format
+- Detects groups: lines starting with `- ` containing no URL become group headers
+- Extracts inline comments: `# comment text` after links/groups
+- Returns `ParsedDocument` with ungrouped links and groups
 
-Key method: `generate_target(url)` - creates hash-based target for external URLs
+### Transformer (`transformer.ts`)
+- Converts parsed data to render-ready structures
+- Generates deterministic SHA256-based targets (first 8 hex chars) for external URLs
+- Internal/relative URLs get `target="_self"`
+- Explicit `{target="..."}` attributes override both behaviors
 
-### 3. Generator (`generator.py`)
-- Uses Jinja2 templates to render final HTML
-- Template location: `templates/index.html`
-- Copies static assets (CSS, favicon.png) to docs/
-- Creates `.nojekyll` file for GitHub Pages compatibility
-- Calculates relative CSS and favicon paths for nested directories
+### Renderer (`renderer.ts`)
+- Builds DOM elements from transformed data
+- Uses `<details>`/`<summary>` for collapsible groups
+- Renders breadcrumbs, child directory buttons, edit links
 
-### 4. Build Script (`build.py`)
-- Orchestrates the pipeline
-- **Uses current working directory as content root** (text/ and docs/ locations)
-- Code location (templates, modules) determined from script's parent directory
-- Walks `text/` directory tree to find all README.md files (unlimited depth)
-- Mirrors directory structure: `text/foo/bar/README.md` → `docs/foo/bar/index.html`
-- Generates clickable breadcrumb navigation via `get_breadcrumbs_from_path()`
-- Calculates relative CSS and favicon paths based on nesting depth
-- Auto-detects child directories containing README.md files via `find_child_directories()`
-- Extracts git repository info via `get_git_info()` and generates edit URLs via `generate_edit_url()`
+### Router (`router.ts`)
+- Client-side hash-based routing
+- Maps `#/path/to/topic` → fetches `text/path/to/topic/README.md`
+- Listens for `hashchange` events
 
-### 5. Build Wrapper (`build-metabrowse.sh`)
-- User-facing entry point for building content
-- **Follows bashics coding standards** (see `~/.local/bin/bashics/docs/`)
-- Run from content directory (containing text/ and docs/)
-- Validates content directory structure
-- Locates metabrowse code repository
-- Invokes build.py with proper environment
-- Provides helpful error messages for common issues
+### Search (`search.ts`)
+- **Local mode**: Filters current page content in-place (links, groups, child buttons)
+- **Global mode**: Builds a search index by fetching all README.md files, searches across all pages
+- Search state persists in localStorage across navigations
 
-### 6. Content Wizard (`metabrowse-wiz.sh`)
-- User-facing wizard for creating content directories with templates
-- **Follows bashics coding standards** (see `~/.local/bin/bashics/docs/`)
-- Run from content directory (containing text/)
-- Commands:
-  - `mkdir NAME`: Create single directory with template README.md
-  - `mktree PATTERN [...]`: Create multiple directories using brace expansion
-- Template README.md includes:
-  - Sample links in various formats (plain URL, markdown, with title)
-  - Example collapsible groups with comments
-  - Usage notes explaining metabrowse syntax
-- Supports nested brace expansion: `courses/{intro,advanced}/{week1,week2}`
-- Automatically creates parent directories as needed
-- Skips directories that already contain README.md files
+### Editor Integration (`editor.ts`)
+- Launches veditor.web (CodeMirror 6 + vim mode) in a new tab
+- Loaded at runtime from GitHub Pages via dynamic `import()`
 
-## Editor SPA (`editor/`)
-
-The `editor/` directory contains a lightweight TypeScript SPA that provides in-browser editing of content files. It opens in a new tab when the user clicks "Edit" on any metabrowse page.
-
-The editor component itself (CodeMirror 6 + vim mode) is provided by **veditor.web** (`Stabledog/veditor.web`), a shared component also used by notehub.web. It is loaded at runtime from GitHub Pages via dynamic `import()`. The base URL defaults to `https://stabledog.github.io/veditor.web` and can be overridden via the `VITE_VEDITOR_BASE` environment variable (required for GHES deployments).
-
-The editor SPA handles auth (PAT + host), file loading/saving via the GitHub Contents API, and the app shell (header, status messages, confirm bar). The `editor/dist/` directory is gitignored; the buildserver rebuilds it on demand with hash-based caching. For local builds:
-
-```bash
-cd editor && npm ci && npm run build
-```
+### Supporting Modules
+- **`github.ts`** — GitHub API client (token validation, tree fetching, content retrieval)
+- **`favicon.ts`** — Fetches and caches favicons for external links via localStorage
+- **`keyboard.ts`** — Keyboard shortcut bindings
+- **`cache.ts`** — localStorage-based cache layer
 
 ## Directory Structure
 
-**Code repository** (this repo):
 ```
 metabrowse/
-├── templates/            # Jinja2 templates
-│   ├── index.html        # Main template
-│   └── style.css         # Shared stylesheet
-├── editor/               # Editor SPA (uses veditor.web at runtime)
-│   ├── src/              # TypeScript source
-│   └── dist/             # Built output (gitignored, built on demand)
-├── parser.py             # Stage 1: Extract links/groups
-├── transformer.py        # Stage 2: Generate targets, prepare HTML data
-├── generator.py          # Stage 3: Render templates
-├── build.py              # Main orchestrator
-├── build-metabrowse.sh   # User-facing build wrapper
-├── build-editor.sh       # Build the editor SPA (editor/dist/)
-├── serve-metabrowse.sh   # Local preview server for testing
-├── metabrowse-wiz.sh     # Content wizard for creating directories
-├── requirements.txt      # Python dependencies
-└── editor/               # Browser-based editor SPA
-    ├── src/              # TypeScript source (CodeMirror + vim via veditor.web)
-    ├── dist/             # Built output (gitignored, built on demand)
-    ├── package.json      # Editor npm dependencies
-    └── vite.config.ts    # Vite build config
-```
-
-**Content repository** (user's separate repo):
-```
-my-metabrowse-links/
-├── .metabrowse.conf      # Config file with EDIT_BASE_URL
 ├── .github/workflows/
-│   └── build.yml         # GitHub Actions: build + deploy to gh-pages
-├── text/                 # Source markdown files (input)
-│   ├── README.md         # Root index
-│   ├── <course>/
-│   │   └── README.md     # Course-specific links
-│   └── <course>/<topic>/
-│       └── README.md     # Nested topic links (unlimited depth)
-└── docs/                 # Local build artifact (gitignored, not committed)
+│   └── deploy.yml          # Build + deploy SPA to gh-pages
+├── index.html              # Minimal SPA entry point
+├── vite.config.ts          # Vite config (requires VITE_BASE)
+├── tsconfig.json           # TypeScript strict mode
+├── package.json            # npm deps: vite, vitest, typescript, gh-pages
+├── Makefile                # Dev commands (npm-based)
+├── metabrowse-wiz.sh       # Content wizard for creating directories
+├── public/
+│   ├── favicon.ico
+│   └── favicon.png
+└── src/
+    ├── main.ts             # Entry: import CSS, call init()
+    ├── app.ts              # App shell: auth, fetch, orchestration
+    ├── parser.ts           # Markdown → structured data
+    ├── transformer.ts      # Structured data → render-ready
+    ├── renderer.ts         # Render-ready → DOM
+    ├── router.ts           # Hash-based client-side routing
+    ├── search.ts           # Local filter + global cross-page search
+    ├── editor.ts           # veditor.web integration
+    ├── github.ts           # GitHub API client
+    ├── favicon.ts          # Favicon loading/caching
+    ├── keyboard.ts         # Keyboard shortcuts
+    ├── cache.ts            # localStorage cache
+    ├── style.css           # All styles
+    ├── veditor.d.ts        # Type declarations for veditor.web
+    └── __tests__/
+        ├── parser.test.ts
+        ├── transformer.test.ts
+        └── fixtures/       # Test markdown files
 ```
 
-**`gh-pages` branch** (auto-managed by GitHub Actions, never edited manually):
+**Content repository** (e.g., `metabrowse-links`):
 ```
-index.html
-style.css
-favicon.png
-search-index.json
-.nojekyll
-<course>/index.html
-...
+metabrowse-links/
+├── text/                   # Source markdown files
+│   ├── README.md           # Root index
+│   ├── <topic>/
+│   │   └── README.md
+│   └── <topic>/<subtopic>/
+│       └── README.md       # Unlimited nesting
+└── .gitignore
 ```
 
-## Markdown Syntax for text/ Files
+No build step in the content repo — the metabrowse SPA reads `text/` directly via the GitHub API.
 
-**Important**: Child directories are automatically detected and displayed - you do NOT need to manually add links to child README.md files in the parent README.md.
+## Markdown Syntax for Content Files
 
 **Groups** (collapsible sections):
 ```markdown
-- Group Name # Optional comment about this group
-  - https://link1.com # Optional comment about this link
+- Group Name # Optional comment
+  - https://link1.com # Optional comment
   - Link title https://link2.com
-  - [Link text](https://link3.com) # Comments work with all link formats
+  - [Link text](https://link3.com)
 ```
 
-**Link formats supported**:
+**Link formats**:
 - Plain URL: `- https://example.com`
 - With title: `- Link title https://example.com`
 - Markdown: `- [Link text](https://example.com)`
 - With explicit target: `- [Link text](https://example.com){target="_custom"}`
 - Raw HTML: `- <a href="https://example.com">Text</a>`
-- Any `scheme://` URL: `- chrome://settings` or `- edge://favorites`
-- Mailto/tel/about: `- mailto:user@example.com` or `- tel:+1234567890`
+- Any scheme: `- chrome://settings`, `- mailto:user@example.com`
 
-**Comments**: Add `# comment text` at the end of any link or group line:
-- Comments are displayed as small, gray, italic text below the link/group
-- Plain text only - no markup or special formatting
-- Comments are optional - links/groups without comments work as before
-- Example: `- [Khan Academy](https://khanacademy.org) # Great for learning math`
+**Group detection rule**: A line starting with `- ` containing no URL is a group header. Indented lines below it become children.
 
-**Group detection rule**: A line starting with `- ` that contains no URL is treated as a group header. Links indented with more spaces than the group header become children of that group.
-
-**Child directory auto-linking**: When a directory contains subdirectories with README.md files (e.g., `text/calcrt/` contains `text/calcrt/basics/README.md`), the subdirectories are automatically displayed as horizontal navigation buttons. Directory names are formatted with title case (underscores and hyphens converted to spaces).
-
-## Key Implementation Details
-
-1. **Target generation**: The transformer distinguishes between navigation and payload links:
-   - **External URLs** (any URL with a scheme — `://` or `mailto:`/`tel:`/`about:`): Use `hashlib.sha256(url.encode()).hexdigest()[:8]` for deterministic 8-character targets (enables tab reuse). Supported schemes include http, https, ftp, chrome, edge, brave, vscode, ssh, mailto, tel, about, and any other `word://` pattern.
-   - **Internal URLs** (relative paths without a scheme): Use `target="_self"` to keep navigation in the same tab
-   - **Explicit targets**: User-specified `{target="..."}` attributes override both behaviors
-
-2. **Indentation handling**: The parser tracks indent levels (spaces before content) to determine group membership. Children must have more spaces than their parent group header.
-
-3. **Path calculations**: Multiple functions compute relative paths based on directory depth:
-   - `calculate_css_path()`: Relative path to style.css
-   - `calculate_favicon_path()`: Relative path to favicon.png
-   - Both use `../` multiplied by nesting depth
-
-4. **Breadcrumb generation**: `get_breadcrumbs_from_path()` creates clickable navigation:
-   - Returns tuple of (breadcrumbs_list, current_page_name)
-   - Each breadcrumb has 'name' and 'url' keys with relative paths
-   - Root always accessible from any depth via calculated `../` paths
-
-5. **HTML rendering**: Uses `<details>` and `<summary>` elements for collapsible groups (no JavaScript needed). Breadcrumbs rendered in an `<h1>` tag for proper semantic structure and accessibility.
-
-6. **Child directory auto-detection**: `find_child_directories()` scans for subdirectories containing README.md files. Children are sorted alphabetically and displayed as horizontal buttons using flexbox with wrapping.
-
-7. **Favicon handling**: If `text/favicon.png` exists, it's copied to `docs/favicon.png` during build and linked with appropriate relative paths in all generated HTML files.
-
-8. **Edit link generation**: `read_edit_base_url()` reads the `EDIT_BASE_URL` from `.metabrowse.conf` in the content repo root. `generate_edit_url()` appends the relative path from the repo root:
-   - Example config: `EDIT_BASE_URL=https://github.com/your-org/your-repo/blob/main`
-   - Generates URLs like: `{EDIT_BASE_URL}/text/{path}/README.md`
-   Edit links open in new tabs (target="_blank"). If no config file exists, the build will fail.
-
-9. **Search index generation**: `build.py` generates `docs/search-index.json` containing all pages' links, groups, children, and breadcrumbs. Each page entry includes path, title, breadcrumbs string, links array (with text, url, group, comment), group names, and child names. The index is loaded lazily by the global search modal on first use.
-
-10. **In-page filter**: Client-side JavaScript hides non-matching links, groups, and child buttons as the user types. Matches against link text, URLs, group names, and comments. Groups auto-expand when they contain matches. Keyboard shortcut `/` focuses the filter input.
-
-11. **Global cross-page search**: A modal overlay (`Ctrl+K`) fetches `search-index.json` and searches across all pages. Results are grouped by page with breadcrumb paths, matching text highlighted with `<mark>`. Supports searching link text, URLs, comments, group names, child names, and page titles.
+**Child directories**: Subdirectories containing README.md are automatically discovered and displayed as navigation buttons. No manual linking needed.
 
 ## Development Workflow
 
-When modifying the pipeline:
-1. Parser changes affect link/group extraction from markdown
-2. Transformer changes affect target generation or data structure
-3. Generator changes affect HTML rendering or template usage
-4. Build script changes affect file discovery or path handling
+1. Parser changes (`parser.ts`) affect markdown extraction
+2. Transformer changes (`transformer.ts`) affect target generation
+3. Renderer changes (`renderer.ts`) affect DOM output
+4. App changes (`app.ts`) affect auth, data fetching, routing orchestration
 
-After changes, run `make build` to regenerate all HTML files.
+Run `npm test` after changes to verify parser/transformer behavior.
 
 **Shell script coding standards:**
-- All shell scripts MUST pass the `check-bash` skill from `~/.local/bin/bashics`
-- Run `~/.local/bin/bashics/check-bash script-name.sh` before committing
-- See `~/.local/bin/bashics/docs/` for detailed coding standards
+- `metabrowse-wiz.sh` MUST pass the `check-bash` skill from `~/.local/bin/bashics`
+- Run `~/.local/bin/bashics/check-bash metabrowse-wiz.sh` before committing
 
-## GitHub Pages Deployment
+## Deployment
 
-Content repositories deploy via GitHub Actions to a `gh-pages` branch:
-- On push to `main` (when `text/**` or `.github/workflows/**` change), the workflow builds the site and deploys using `peaceiris/actions-gh-pages@v4`
-- GitHub Pages is configured to serve from the `gh-pages` branch at root (`/`)
-- `docs/` is gitignored on `main` — it exists only as a local build artifact
-- The `gh-pages` branch is fully managed by the action; never edit it manually
-- `.nojekyll` file disables Jekyll processing
-- All paths are relative for portability
+The metabrowse SPA deploys via GitHub Actions (`.github/workflows/deploy.yml`):
+- Triggered on push to `main` when `src/`, `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, or `.github/workflows/` change
+- Builds with `VITE_BASE=/metabrowse/` and deploys `dist/` to the `gh-pages` branch via `npx gh-pages`
+- Served at `https://stabledog.github.io/metabrowse/`
+
+Content repos (e.g., `metabrowse-links`) have no CI — the SPA fetches their `text/` files at runtime via the GitHub API. Pushing content changes to the content repo makes them immediately visible (no rebuild needed).
