@@ -78,7 +78,7 @@ export async function showEditor(
   target.innerHTML = `
     <div class="editor-screen">
       <header>
-        <span class="filename">${escapeHtml(contentPath)}</span>
+        <a class="filename" href="https://${escapeHtml(host)}/${escapeHtml(owner)}/${escapeHtml(repo)}/blob/main/${escapeHtml(contentPath)}" target="_blank" rel="noopener noreferrer">${escapeHtml(contentPath)}</a>
         <span id="status-msg"></span>
       </header>
       <div id="editor-container"></div>
