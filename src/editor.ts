@@ -1,5 +1,6 @@
 /** Editor view: loads veditor.web, fetches file, handles save. */
 
+
 import { getFileContent, updateFileContent } from './github.ts';
 
 // veditor base URL — must be set via VITE_VEDITOR_BASE at build time.
