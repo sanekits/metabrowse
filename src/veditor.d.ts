@@ -27,4 +27,8 @@ export function focusEditor(): void;
 export function destroyEditor(): void;
 export function exitInsertMode(): void;
 export function executeExCommand(cmd: string): void;
+export function toggleVimMode(): boolean;
+export function isVimMode(): boolean;
+export function requestSave(): Promise<void>;
+export function requestQuit(force?: boolean): void;
 export function hashTarget(url: string): string;
