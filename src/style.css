@@ -630,3 +630,14 @@ mark {
   font-size: 1.125rem;
   background: #1e1e2e;
 }
+
+.version-badge {
+  position: fixed;
+  bottom: 10px;
+  right: 60px;
+  font-size: 10px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 9999;
+  color: #999;
+}
