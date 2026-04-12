@@ -603,6 +603,11 @@ mark {
 
 /* === Editor view === */
 
+body:has(.editor-screen) {
+  padding: 0;
+  background: #1e1e2e;
+}
+
 .editor-screen {
   display: flex;
   flex-direction: column;
