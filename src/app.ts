@@ -3,6 +3,7 @@
 import { validateToken, getTree, getRawContent, extractContentPaths, DEFAULT_HOST } from './github.ts';
 import type { TreeEntry } from './github.ts';
 import { getCachedTree, setCachedTree, getCachedContent, setCachedContent } from './cache.ts';
+import { logError, logWarn, logInfo, logDebug } from './logging-client.ts';
 import { startRouter } from './router.ts';
 import type { Route } from './router.ts';
 import { parseContent } from './parser.ts';
@@ -37,10 +38,13 @@ export async function init(): Promise<void> {
   const savedToken = localStorage.getItem(LS_TOKEN);
   if (savedToken && owner && repo) {
     try {
+      logInfo(`Auth: Attempting to validate token for host=${host}`);
       await validateToken(host, savedToken);
+      logInfo(`Auth: Authenticated`);
       token = savedToken;
       await loadApp();
-    } catch {
+    } catch (err) {
+      logError(`Auth: Token validation failed: ${err instanceof Error ? err.message : err}`);
       showAuth();
     }
   } else {
@@ -84,7 +88,9 @@ function showAuth(error?: string): void {
     const pat = (document.getElementById('pat') as HTMLInputElement).value.trim();
 
     try {
+      logInfo(`Auth: Attempting to validate token for host=${hostInput}`);
       await validateToken(hostInput, pat);
+      logInfo(`Auth: Authenticated`);
       localStorage.setItem(LS_HOST, hostInput);
       localStorage.setItem(LS_OWNER, ownerInput);
       localStorage.setItem(LS_REPO, repoInput);
@@ -95,7 +101,9 @@ function showAuth(error?: string): void {
       repo = repoInput;
       await loadApp();
     } catch (err) {
-      showAuth(`Authentication failed: ${err instanceof Error ? err.message : err}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      logError(`Auth: Token validation failed: ${msg}`);
+      showAuth(`Authentication failed: ${msg}`);
     }
   });
 }
@@ -103,10 +111,11 @@ function showAuth(error?: string): void {
 async function loadApp(): Promise<void> {
   app.innerHTML = '<div class="loading">Loading...</div>';
 
-  console.log(`[metabrowse] Config: host=${host} owner=${owner} repo=${repo}`);
+  logDebug(`Tree: Config: host=${host} owner=${owner} repo=${repo}`);
 
   // Fetch tree (use cache as fallback)
   try {
+    logInfo(`Tree: Fetching directory tree for ${owner}/${repo}`);
     const entries = await getTree(host, token, owner, repo);
     tree = entries;
     setCachedTree(entries);
@@ -114,15 +123,17 @@ async function loadApp(): Promise<void> {
     const cached = getCachedTree();
     if (cached) {
       tree = cached;
-      console.warn('Using cached tree:', err);
+      logWarn(`Tree: Using cached tree due to network error`);
     } else {
-      app.innerHTML = `<div class="error">Failed to load content tree: ${escapeHtml(String(err))}</div>`;
+      const msg = String(err);
+      logError(`Tree: Failed to fetch tree: ${msg}`);
+      app.innerHTML = `<div class="error">Failed to load content tree: ${escapeHtml(msg)}</div>`;
       return;
     }
   }
 
   contentPaths = extractContentPaths(tree);
-  console.log(`[metabrowse] Loaded tree: ${contentPaths.length} content pages`);
+  logInfo(`Tree: Loaded ${contentPaths.length} pages indexed`);
 
   // Start routing — fires immediately for current hash
   startRouter(handleRoute);
@@ -132,7 +143,7 @@ async function loadApp(): Promise<void> {
 }
 
 async function buildSearchIndex(): Promise<void> {
-  console.log(`[metabrowse] Building search index for ${contentPaths.length} pages...`);
+  logInfo(`Search: Building index for ${contentPaths.length} pages...`);
   const entries: SearchEntry[] = [];
 
   // Fetch all pages in parallel
@@ -148,31 +159,43 @@ async function buildSearchIndex(): Promise<void> {
     })
   );
 
+  let failed = 0;
   for (const result of results) {
     if (result.status === 'fulfilled') {
       entries.push(buildEntry(result.value.dirPath, result.value.content, contentPaths));
+    } else {
+      failed++;
     }
   }
 
+  if (failed > 0) {
+    logWarn(`Search: Failed to index some pages (${failed}/${contentPaths.length})`);
+  }
+
   searchIndex = entries;
-  console.log(`[metabrowse] Search index built: ${entries.length} pages indexed`);
+  logInfo(`Search: Search index built: ${entries.length} pages indexed`);
 }
 
 async function handleRoute(route: Route): Promise<void> {
   if (route.kind === 'edit') {
+    logInfo(`Edit: Opening editor for ${route.contentPath}`);
     await showEditor(app, host, token, owner, repo, route.dirPath);
     return;
   }
 
   // Check if the path exists in the tree
   if (route.dirPath && !contentPaths.includes(route.dirPath)) {
+    logError(`Route: Page not found: ${route.dirPath}`);
     app.innerHTML = `<div class="error">Page not found: ${escapeHtml(route.dirPath)}</div>`;
     return;
   }
 
+  logInfo(`Route: Navigating to #/${route.dirPath || ''}`);
+
   // Show cached content immediately if available
   const cached = getCachedContent(route.contentPath);
   if (cached) {
+    logDebug(`Content: Using cached content for ${route.contentPath}`);
     doRender(route, cached);
   } else {
     app.innerHTML = `<div class="loading">Loading ${escapeHtml(route.dirPath || 'home')}...</div>`;
@@ -180,16 +203,20 @@ async function handleRoute(route: Route): Promise<void> {
 
   // Fetch fresh content
   try {
+    logInfo(`Content: Fetching page ${route.dirPath || 'home'} from ${route.contentPath}`);
     const content = await getRawContent(host, token, owner, repo, route.contentPath);
+    logInfo(`Content: Loaded ${route.contentPath}`);
     setCachedContent(route.contentPath, content);
     if (content !== cached) {
       doRender(route, content);
     }
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     if (!cached) {
-      app.innerHTML = `<div class="error">Failed to load: ${escapeHtml(String(err))}</div>`;
+      logError(`Content: Failed to load ${route.contentPath}: ${msg}`);
+      app.innerHTML = `<div class="error">Failed to load: ${escapeHtml(msg)}</div>`;
     } else {
-      console.warn('Failed to refresh, using cache:', err);
+      logWarn(`Content: Failed to refresh ${route.contentPath}, using cache`);
     }
   }
 }
