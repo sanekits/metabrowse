@@ -2,6 +2,7 @@
 
 import type { HTMLDocument, HTMLLink, HTMLGroup, HTMLLinkGroup, HTMLSection } from './transformer.ts';
 import type { Route } from './router.ts';
+import { createLogViewer } from './logging-client.ts';
 
 export interface RenderConfig {
   contentPaths: string[];
@@ -238,9 +239,11 @@ export function renderPage(
   // Fixed header
   const fixedHeader = el('div', { class: 'fixed-header' });
 
-  // Header bar with breadcrumbs + edit link
+  // Header bar with breadcrumbs + edit link + logs button
   const headerBar = el('div', { class: 'header-bar' });
   headerBar.appendChild(renderBreadcrumbsEl(route.dirPath));
+
+  const headerActions = el('div', { class: 'header-actions' });
 
   const editHash = route.dirPath ? `#/edit/${route.dirPath}` : '#/edit/';
   const editLink = el('a', { href: editHash, class: 'edit-link' }, 'Edit');
@@ -248,7 +251,15 @@ export function renderPage(
     e.preventDefault();
     window.open(editHash, '_blank');
   });
-  headerBar.appendChild(editLink);
+  headerActions.appendChild(editLink);
+
+  const logsBtn = el('button', { class: 'logs-btn', title: 'View debug logs' }, 'Logs');
+  logsBtn.addEventListener('click', () => {
+    document.body.appendChild(createLogViewer());
+  });
+  headerActions.appendChild(logsBtn);
+
+  headerBar.appendChild(headerActions);
 
   fixedHeader.appendChild(headerBar);
 
