@@ -26,17 +26,29 @@ interface AppState {
  * E.g., ["teach", "teach/CPP", "teach/Python", "research"]
  * → root with children teach, research; teach with children CPP, Python.
  */
-function buildTreeNodes(contentPaths: string[]): TreeNode[] {
+/**
+ * Collect dirPaths of all expanded nodes in a tree.
+ */
+function getExpandedPaths(nodes: TreeNode[]): Set<string> {
+  const expanded = new Set<string>();
+  const walk = (list: TreeNode[]) => {
+    for (const node of list) {
+      if (node.expanded) expanded.add(node.dirPath);
+      walk(node.children);
+    }
+  };
+  walk(nodes);
+  return expanded;
+}
+
+function buildTreeNodes(contentPaths: string[], expandedPaths?: Set<string>): TreeNode[] {
   const root: TreeNode[] = [];
   const pathMap: Record<string, TreeNode> = {};
 
-  // Create nodes in order
-  for (const dirPath of contentPaths) {
-    if (dirPath === '') {
-      // Root node (text/README.md)
-      continue;
-    }
+  // Sort so parents always appear before children
+  const sorted = contentPaths.filter(p => p !== '').sort();
 
+  for (const dirPath of sorted) {
     const parts = dirPath.split('/');
     const name = parts[parts.length - 1];
     const parentPath = parts.slice(0, -1).join('/');
@@ -46,16 +58,14 @@ function buildTreeNodes(contentPaths: string[]): TreeNode[] {
       dirPath,
       depth: parts.length - 1,
       children: [],
-      expanded: false,
+      expanded: expandedPaths ? expandedPaths.has(dirPath) : false,
     };
 
     pathMap[dirPath] = node;
 
     if (parentPath === '') {
-      // Top-level node
       root.push(node);
     } else if (pathMap[parentPath]) {
-      // Add to parent
       pathMap[parentPath].children.push(node);
     }
   }
@@ -71,6 +81,7 @@ function buildTreeNodes(contentPaths: string[]): TreeNode[] {
 
   return root;
 }
+
 
 /**
  * Flatten tree into visible nodes (respecting expand state).
@@ -96,6 +107,8 @@ export async function showTreePanel(
   state: AppState,
   refreshTree: () => Promise<string[]>,
 ): Promise<void> {
+  logInfo(`TreePanel: showTreePanel called, contentPaths=${state.contentPaths.length}`);
+
   const overlay = document.createElement('div');
   overlay.className = 'tree-panel-overlay';
   overlay.style.cssText = `
@@ -229,6 +242,7 @@ export async function showTreePanel(
   let inputMode: 'new' | 'rename' | null = null;
   let inputNode: TreeNode | null = null;
   let pendingDelete: { paths: string[] } | null = null;
+  let pendingFocusInput: HTMLInputElement | null = null;
 
   // Render function
   function render() {
@@ -301,11 +315,16 @@ export async function showTreePanel(
               await renameNode(state.host, state.token, state.owner, state.repo, node.dirPath, value.trim(), state.contentPaths);
             }
 
+            const wasNew = inputMode === 'new';
+            const parentDirPath = node.dirPath;
             inputMode = null;
             inputNode = null;
             const newPaths = await refreshTree();
             state.contentPaths = newPaths;
-            treeRoot = buildTreeNodes(newPaths);
+            // Preserve expand states, and auto-expand parent after Insert
+            const expanded = getExpandedPaths(treeRoot);
+            if (wasNew) expanded.add(parentDirPath);
+            treeRoot = buildTreeNodes(newPaths, expanded);
             selectedIndex = Math.min(selectedIndex, getVisibleNodes(treeRoot).length - 1);
             status.textContent = '';
             render();
@@ -327,8 +346,8 @@ export async function showTreePanel(
         });
 
         nodeEl.appendChild(input);
-        input.focus();
-        input.select();
+        // Defer focus — element must be in the DOM first
+        pendingFocusInput = input;
       }
 
       nodeEl.addEventListener('click', () => {
@@ -338,6 +357,13 @@ export async function showTreePanel(
 
       listContainer.appendChild(nodeEl);
     }
+
+    // Focus the input after all elements are in the DOM
+    if (pendingFocusInput) {
+      pendingFocusInput.focus();
+      pendingFocusInput.select();
+      pendingFocusInput = null;
+    }
   }
 
   // Keyboard handler
@@ -345,8 +371,16 @@ export async function showTreePanel(
     const visible = getVisibleNodes(treeRoot);
     const selectedNode = visible[selectedIndex];
 
-    // If in input mode, let default handlers work
+    logInfo(`TreePanel: handleKeydown key=${e.key}, visible=${visible.length}, selectedIndex=${selectedIndex}, node=${selectedNode?.dirPath ?? 'NONE'}, inputMode=${inputMode}`);
+
+    // If in input mode, only handle Escape (fallback if input didn't get focus)
     if (inputMode) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        inputMode = null;
+        inputNode = null;
+        render();
+      }
       return;
     }
 
@@ -442,7 +476,8 @@ export async function showTreePanel(
         // Deleted single file, refresh
         const newPaths = await refreshTree();
         state.contentPaths = newPaths;
-        treeRoot = buildTreeNodes(newPaths);
+        const expanded = getExpandedPaths(treeRoot);
+        treeRoot = buildTreeNodes(newPaths, expanded);
         selectedIndex = Math.min(selectedIndex, getVisibleNodes(treeRoot).length - 1);
         status.textContent = '';
         render();
@@ -513,7 +548,8 @@ export async function showTreePanel(
         await confirmDeleteNodes(state.host, state.token, state.owner, state.repo, pendingDelete!.paths);
         const newPaths = await refreshTree();
         state.contentPaths = newPaths;
-        treeRoot = buildTreeNodes(newPaths);
+        const expanded = getExpandedPaths(treeRoot);
+        treeRoot = buildTreeNodes(newPaths, expanded);
         selectedIndex = Math.min(selectedIndex, getVisibleNodes(treeRoot).length - 1);
         pendingDelete = null;
         status.textContent = '';
@@ -536,11 +572,12 @@ export async function showTreePanel(
 
   // Attach keyboard handler to document (panel is just a div, won't get focus)
   const keyListener = (e: KeyboardEvent) => {
-    // Only handle if overlay is still in DOM
+    logInfo(`TreePanel: keyListener fired, key=${e.key}, hasParent=${!!overlay.parentElement}`);
     if (overlay.parentElement) {
       handleKeydown(e);
     }
   };
+  logInfo(`TreePanel: Attaching keydown listener, treeRoot has ${treeRoot.length} nodes, contentPaths: ${state.contentPaths.join(', ')}`);
   document.addEventListener('keydown', keyListener);
 
   // Clean up listener when overlay is removed
