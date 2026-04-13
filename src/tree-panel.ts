@@ -306,17 +306,17 @@ export async function showTreePanel(
           }
 
           try {
-            status.textContent = inputMode === 'new' ? 'Creating...' : 'Renaming...';
+            const wasNew = inputMode === 'new';
+            const parentDirPath = node.dirPath;
+            status.textContent = wasNew ? 'Creating...' : 'Renaming...';
             status.style.color = '#888';
 
-            if (inputMode === 'new') {
+            if (wasNew) {
               await createNode(state.host, state.token, state.owner, state.repo, node.dirPath, value.trim(), state.contentPaths);
-            } else if (inputMode === 'rename') {
+            } else {
               await renameNode(state.host, state.token, state.owner, state.repo, node.dirPath, value.trim(), state.contentPaths);
             }
 
-            const wasNew = inputMode === 'new';
-            const parentDirPath = node.dirPath;
             inputMode = null;
             inputNode = null;
             const newPaths = await refreshTree();
@@ -370,8 +370,6 @@ export async function showTreePanel(
   function handleKeydown(e: KeyboardEvent) {
     const visible = getVisibleNodes(treeRoot);
     const selectedNode = visible[selectedIndex];
-
-    logInfo(`TreePanel: handleKeydown key=${e.key}, visible=${visible.length}, selectedIndex=${selectedIndex}, node=${selectedNode?.dirPath ?? 'NONE'}, inputMode=${inputMode}`);
 
     // If in input mode, only handle Escape (fallback if input didn't get focus)
     if (inputMode) {
@@ -572,12 +570,10 @@ export async function showTreePanel(
 
   // Attach keyboard handler to document (panel is just a div, won't get focus)
   const keyListener = (e: KeyboardEvent) => {
-    logInfo(`TreePanel: keyListener fired, key=${e.key}, hasParent=${!!overlay.parentElement}`);
     if (overlay.parentElement) {
       handleKeydown(e);
     }
   };
-  logInfo(`TreePanel: Attaching keydown listener, treeRoot has ${treeRoot.length} nodes, contentPaths: ${state.contentPaths.join(', ')}`);
   document.addEventListener('keydown', keyListener);
 
   // Clean up listener when overlay is removed

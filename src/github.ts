@@ -60,6 +60,7 @@ export async function getTree(
   const data = await apiFetch<TreeResponse>(
     host, token,
     `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+    { cache: 'no-store' },
   );
   return data.tree;
 }
