@@ -4,7 +4,7 @@ import { validateToken, getTree, getRawContent, extractContentPaths, DEFAULT_HOS
 import type { TreeEntry } from './github.ts';
 import { getCachedTree, setCachedTree, getCachedContent, setCachedContent } from './cache.ts';
 import { logError, logWarn, logInfo, logDebug } from './logging-client.ts';
-import { startRouter } from './router.ts';
+import { startRouter, parseHash } from './router.ts';
 import type { Route } from './router.ts';
 import { parseContent } from './parser.ts';
 import { transform } from './transformer.ts';
@@ -14,6 +14,7 @@ import { initSearch, buildEntry } from './search.ts';
 import type { SearchEntry } from './search.ts';
 import { initKeyboard } from './keyboard.ts';
 import { showEditor } from './editor.ts';
+import { showTreePanel } from './tree-panel.ts';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
@@ -228,17 +229,22 @@ function doRender(route: Route, content: string): void {
     : 'Home';
   const doc = transform(parsed, title);
 
+  const handleTreePanel = () => {
+    showTreePanel(getAppState(), refreshTree);
+  };
+
   renderPage(app, doc, route, {
     contentPaths,
     owner,
     repo,
     host,
+    onTreePanel: handleTreePanel,
   });
 
   // Post-render setup
   loadFavicons(app);
   initSearch(app, () => searchIndex);
-  initKeyboard(app);
+  initKeyboard(app, { onTreePanel: handleTreePanel });
 }
 
 function escapeHtml(s: string): string {
@@ -249,4 +255,20 @@ function escapeHtml(s: string): string {
 
 function escapeAttr(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Export current app state for tree panel. */
+export function getAppState() {
+  return { token, host, owner, repo, contentPaths, tree };
+}
+
+/** Refresh tree, content paths, and search index. Re-renders current route. */
+export async function refreshTree(): Promise<string[]> {
+  const entries = await getTree(host, token, owner, repo);
+  tree = entries;
+  setCachedTree(entries);
+  contentPaths = extractContentPaths(tree);
+  buildSearchIndex();
+  handleRoute(parseHash(location.hash));
+  return contentPaths;
 }

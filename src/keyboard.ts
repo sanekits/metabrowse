@@ -7,8 +7,12 @@ function isInputFocused(): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
+export interface KeyboardOpts {
+  onTreePanel?: () => void;
+}
+
 /** Initialize keyboard shortcuts. Call after each render. */
-export function initKeyboard(container: HTMLElement): void {
+export function initKeyboard(container: HTMLElement, opts?: KeyboardOpts): void {
   // Clean up previous listeners
   if (cleanup) cleanup();
 
@@ -17,6 +21,13 @@ export function initKeyboard(container: HTMLElement): void {
   let allCollapsed = false;
 
   function handler(e: KeyboardEvent): void {
+    // "t" — open tree panel
+    if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (isInputFocused()) return;
+      e.preventDefault();
+      opts?.onTreePanel?.();
+    }
+
     // "/" — local search, focus input
     if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (isInputFocused()) return;

@@ -179,6 +179,24 @@ h1.breadcrumbs {
   background-color: #7f8c8d;
 }
 
+.tree-btn {
+  display: inline-block;
+  padding: 5px 11px;
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 0.7em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.tree-btn:hover {
+  background-color: #15803d;
+}
+
 .logs-btn {
   display: inline-block;
   padding: 5px 11px;
@@ -668,4 +686,79 @@ body:has(.editor-screen) {
   pointer-events: none;
   z-index: 9999;
   color: #999;
+}
+
+/* Tree panel modal */
+.tree-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.tree-panel {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  width: 400px;
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
+  font-family: monospace;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.tree-panel input {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border: 1px solid #0ea5e9;
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.tree-panel input:focus {
+  outline: none;
+  border-color: #06b6d4;
+}
+
+.tree-node {
+  padding: 4px 8px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tree-node:hover {
+  background: #2a2a2a;
+}
+
+.tree-node.tree-node-selected {
+  background: #333;
+  border-left-color: #0ea5e9;
+}
+
+.tree-expand-icon {
+  width: 12px;
+  text-align: center;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.tree-node-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

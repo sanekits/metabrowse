@@ -45,3 +45,9 @@ export function setCachedContent(path: string, content: string, etag?: string): 
 export function getEtag(path: string): string | null {
   return localStorage.getItem(etagKey(path));
 }
+
+/** Remove cached content and etag for a path. */
+export function removeCachedContent(path: string): void {
+  localStorage.removeItem(contentKey(path));
+  localStorage.removeItem(etagKey(path));
+}

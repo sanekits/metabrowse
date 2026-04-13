@@ -171,3 +171,45 @@ export async function updateFileContent(
   const data = await res.json() as UpdateResponse;
   return data.content.sha;
 }
+
+/** Create a new file. Returns the new SHA. Throws 422 if file already exists. */
+export async function createFile(
+  host: string, token: string,
+  owner: string, repo: string, path: string,
+  content: string, message: string,
+): Promise<string> {
+  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: headers(token),
+    body: JSON.stringify({
+      message,
+      content: encodeBase64(content),
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GitHub API ${res.status}: ${text}`);
+  }
+  const data = await res.json() as UpdateResponse;
+  return data.content.sha;
+}
+
+/** Delete a file. Requires the file's current SHA. */
+export async function deleteFile(
+  host: string, token: string,
+  owner: string, repo: string, path: string,
+  sha: string, message: string,
+): Promise<void> {
+  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${path}`, {
+    method: 'DELETE',
+    headers: headers(token),
+    body: JSON.stringify({
+      message,
+      sha,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GitHub API ${res.status}: ${text}`);
+  }
+}

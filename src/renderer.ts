@@ -9,6 +9,7 @@ export interface RenderConfig {
   owner: string;
   repo: string;
   host: string;
+  onTreePanel?: () => void;
 }
 
 /** Format a directory name for display: replace [-_] with spaces, title-case. */
@@ -253,6 +254,12 @@ export function renderPage(
   });
   headerActions.appendChild(editLink);
 
+  const treeBtn = el('button', { class: 'tree-btn', title: 'Manage tree (t)' }, 'Tree');
+  treeBtn.addEventListener('click', () => {
+    config.onTreePanel?.();
+  });
+  headerActions.appendChild(treeBtn);
+
   const logsBtn = el('button', { class: 'logs-btn', title: 'View debug logs' }, 'Logs');
   logsBtn.addEventListener('click', () => {
     document.body.appendChild(createLogViewer());
@@ -310,6 +317,7 @@ export function renderPage(
   const footer = document.createElement('footer');
   footer.className = 'shortcut-help';
   footer.innerHTML = [
+    '<kbd>t</kbd> Tree',
     '<kbd>e</kbd> Edit',
     '<kbd>/</kbd> Search page',
     '<kbd>Ctrl+K</kbd> Search all',
