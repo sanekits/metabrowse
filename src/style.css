@@ -770,3 +770,107 @@ body:has(.editor-screen) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Drop target indicator */
+.drop-target {
+  outline: 2px dashed #0ea5e9;
+  outline-offset: -2px;
+  background: rgba(14, 165, 233, 0.05);
+}
+
+/* Drop modal */
+.drop-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.drop-modal {
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  width: 350px;
+  font-family: monospace;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.drop-modal-header {
+  padding: 10px 14px;
+  font-weight: bold;
+  border-bottom: 1px solid #444;
+}
+
+.drop-modal-form {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drop-modal-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.drop-modal-form input {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  border-radius: 2px;
+  padding: 6px 8px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.drop-modal-form input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+
+.drop-modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.drop-modal-ok,
+.drop-modal-cancel {
+  padding: 6px 16px;
+  border: 1px solid #555;
+  border-radius: 2px;
+  font-family: monospace;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.drop-modal-ok {
+  background: #0ea5e9;
+  color: #fff;
+  border-color: #0ea5e9;
+}
+
+.drop-modal-ok:hover {
+  background: #0284c7;
+}
+
+.drop-modal-cancel {
+  background: #333;
+  color: #e0e0e0;
+}
+
+.drop-modal-cancel:hover {
+  background: #444;
+}

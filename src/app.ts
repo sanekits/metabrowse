@@ -15,6 +15,7 @@ import type { SearchEntry } from './search.ts';
 import { initKeyboard } from './keyboard.ts';
 import { showEditor } from './editor.ts';
 import { showTreePanel } from './tree-panel.ts';
+import { initDropZone } from './drop-handler.ts';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
@@ -245,6 +246,10 @@ function doRender(route: Route, content: string): void {
   loadFavicons(app);
   initSearch(app, () => searchIndex);
   initKeyboard(app, { onTreePanel: handleTreePanel });
+  initDropZone(app, {
+    host, token, owner, repo, route,
+    onSaved: () => handleRoute(route),
+  });
 }
 
 function escapeHtml(s: string): string {
