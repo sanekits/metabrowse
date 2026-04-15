@@ -874,3 +874,29 @@ body:has(.editor-screen) {
 .drop-modal-cancel:hover {
   background: #444;
 }
+
+/* Import toast notification */
+.import-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-family: monospace;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10000;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.import-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

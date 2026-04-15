@@ -14,6 +14,26 @@ export interface DropConfig {
   onSaved: () => void;
 }
 
+/** Show a non-modal toast that auto-dismisses after a few seconds. */
+function showToast(message: string): void {
+  const existing = document.querySelector('.import-toast');
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.className = 'import-toast';
+  el.textContent = message;
+  document.body.appendChild(el);
+
+  // Trigger reflow so the transition activates
+  el.offsetWidth; // eslint-disable-line @typescript-eslint/no-unused-expressions
+  el.classList.add('visible');
+
+  setTimeout(() => {
+    el.classList.remove('visible');
+    el.addEventListener('transitionend', () => el.remove());
+  }, 3000);
+}
+
 /** Show a modal for entering link details. Returns null on cancel. */
 function showLinkModal(url: string): Promise<{ title: string; url: string; comment: string } | null> {
   return new Promise((resolve) => {
@@ -122,12 +142,27 @@ function parseLinksFromText(text: string): Array<{ text: string; url: string }> 
   return results;
 }
 
-/** Insert entry lines into the markdown content after the page title. */
-function insertAfterTitle(content: string, newLines: string[]): string {
+/** Insert entry lines under an "- Imported:" group, creating it if needed. */
+function insertIntoImported(content: string, newLines: string[]): string {
   const lines = content.split('\n');
-  let insertIdx = 0;
+  const indented = newLines.map(l => `  ${l}`);
 
-  // Find the first line starting with "# " (page title)
+  // Look for an existing "- Imported:" group
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd() === '- Imported:') {
+      // Find the end of its indented children
+      let end = i + 1;
+      while (end < lines.length && /^\s+\S/.test(lines[end])) {
+        end++;
+      }
+      const before = lines.slice(0, end);
+      const after = lines.slice(end);
+      return [...before, ...indented, ...after].join('\n');
+    }
+  }
+
+  // No existing group — create one after the page title
+  let insertIdx = 0;
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].startsWith('# ')) {
       insertIdx = i + 1;
@@ -137,8 +172,7 @@ function insertAfterTitle(content: string, newLines: string[]): string {
 
   const before = lines.slice(0, insertIdx);
   const after = lines.slice(insertIdx);
-
-  return [...before, '', ...newLines, ...after].join('\n');
+  return [...before, '', '- Imported:', ...indented, ...after].join('\n');
 }
 
 /** Save new entries to GitHub and trigger re-render. */
@@ -147,7 +181,7 @@ async function insertEntries(entryLines: string[], config: DropConfig, via: stri
   try {
     logInfo(`${via}: Saving ${entryLines.length} link(s) to ${contentPath}`);
     const { content, sha } = await getFileContent(config.host, config.token, config.owner, config.repo, contentPath);
-    const updated = insertAfterTitle(content, entryLines);
+    const updated = insertIntoImported(content, entryLines);
     await updateFileContent(
       config.host, config.token, config.owner, config.repo,
       contentPath, updated, sha,
@@ -155,6 +189,9 @@ async function insertEntries(entryLines: string[], config: DropConfig, via: stri
     );
     removeCachedContent(contentPath);
     logInfo(`${via}: Saved successfully`);
+    const n = entryLines.length;
+    const pageName = contentPath.replace(/^text\//, '').replace(/\/README\.md$/, '') || 'root';
+    showToast(`${n} link${n === 1 ? '' : 's'} imported into ${pageName}`);
     config.onSaved();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -228,7 +265,10 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
     if (!text) return;
 
     const links = parseLinksFromText(text);
-    if (links.length === 0) return;
+    if (links.length === 0) {
+      showToast('No links found in pasted text');
+      return;
+    }
 
     e.preventDefault();
     const lines = links.map(l => `- ${l.url}`);
