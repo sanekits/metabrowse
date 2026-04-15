@@ -123,7 +123,7 @@ function parseLinksFromText(text: string): Array<{ text: string; url: string }> 
     const url = m[1];
     if (!seen.has(url)) {
       seen.add(url);
-      results.push({ text: m[2].trim() || url, url });
+      results.push({ text: truncate(m[2].trim(), 50) || url, url });
     }
   }
 
@@ -133,9 +133,7 @@ function parseLinksFromText(text: string): Array<{ text: string; url: string }> 
     const url = m[0].replace(/[.,;:!?)]+$/, ''); // strip trailing punctuation
     if (!seen.has(url)) {
       seen.add(url);
-      let title = url;
-      try { title = new URL(url).hostname.replace(/^www\./, ''); } catch { /* keep url */ }
-      results.push({ text: title, url });
+      results.push({ text: url, url });
     }
   }
 
@@ -261,19 +259,28 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
   document.addEventListener('paste', async (e: ClipboardEvent) => {
     if (isInputFocused()) return;
 
-    const text = e.clipboardData?.getData('text/plain');
-    if (!text) return;
+    const html = e.clipboardData?.getData('text/html') ?? '';
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (!html && !text) return;
 
-    const links = parseLinksFromText(text);
+    // Try HTML first (preserves <a href> tags), fall back to plain text
+    const links = parseLinksFromText(html || text);
     if (links.length === 0) {
       showToast('No links found in pasted text');
       return;
     }
 
     e.preventDefault();
-    const lines = links.map(l => `- ${l.url}`);
+    const lines = links.map(l =>
+      l.text && l.text !== l.url ? `- ${l.text} ${l.url}` : `- ${l.url}`,
+    );
     await insertEntries(lines, config, 'Paste');
   });
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max).trimEnd() + '...';
 }
 
 function escapeAttr(s: string): string {
