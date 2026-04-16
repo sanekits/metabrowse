@@ -45,9 +45,9 @@ make deploy-metabrowse
 
 Or manually:
 ```bash
-VITE_BASE=/pages/training-lmatheson4/metabrowse/ \
-VITE_VEDITOR_BASE=https://bbgithub.dev.bloomberg.com/pages/lmatheson4/veditor.web/ \
-VITE_DEFAULT_HOST=bbgithub.dev.bloomberg.com \
+VITE_BASE=/pages/<owner>/metabrowse/ \
+VITE_VEDITOR_BASE=https://<ghes-host>/pages/<veditor-owner>/veditor.web/ \
+VITE_DEFAULT_HOST=<ghes-host> \
 npm run build
 
 npx gh-pages -d dist

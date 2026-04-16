@@ -298,7 +298,7 @@ describe('parseContent – real fixtures', () => {
     const section = doc.items[0] as Section;
     const firstLink = section.items[0] as Link;
     expect(firstLink.type).toBe('link');
-    expect(firstLink.url).toContain('bbgithub');
+    expect(firstLink.url).toContain('ghes');
   });
 
   it('preserves URL fragments in real content', () => {
