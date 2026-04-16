@@ -58,6 +58,7 @@ function showAuth(error?: string): void {
   const savedHost = localStorage.getItem(LS_HOST) || DEFAULT_HOST;
   const savedOwner = localStorage.getItem(LS_OWNER) || '';
   const savedRepo = localStorage.getItem(LS_REPO) || '';
+  const savedToken = localStorage.getItem(LS_TOKEN) || '';
 
   app.innerHTML = `
     <div class="auth-screen">
@@ -75,7 +76,7 @@ function showAuth(error?: string): void {
           <input type="text" id="repo" value="${escapeAttr(savedRepo)}" placeholder="bb-metabrowse-links" required />
         </label>
         <label>Personal Access Token
-          <input type="password" id="pat" placeholder="ghp_..." required />
+          <input type="password" id="pat" value="${escapeAttr(savedToken)}" placeholder="ghp_..." required />
         </label>
         <button type="submit">Connect</button>
       </form>
@@ -240,6 +241,7 @@ function doRender(route: Route, content: string): void {
     repo,
     host,
     onTreePanel: handleTreePanel,
+    onSettings: () => showAuth(),
   });
 
   // Post-render setup

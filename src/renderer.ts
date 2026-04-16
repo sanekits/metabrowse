@@ -10,6 +10,7 @@ export interface RenderConfig {
   repo: string;
   host: string;
   onTreePanel?: () => void;
+  onSettings?: () => void;
 }
 
 /** Format a directory name for display: replace [-_] with spaces, title-case. */
@@ -265,6 +266,12 @@ export function renderPage(
     document.body.appendChild(createLogViewer());
   });
   headerActions.appendChild(logsBtn);
+
+  const settingsBtn = el('button', { class: 'settings-btn', title: 'Settings' }, 'Settings');
+  settingsBtn.addEventListener('click', () => {
+    config.onSettings?.();
+  });
+  headerActions.appendChild(settingsBtn);
 
   headerBar.appendChild(headerActions);
 
