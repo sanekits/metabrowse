@@ -42,7 +42,7 @@ function getExpandedPaths(nodes: TreeNode[]): Set<string> {
 }
 
 function buildTreeNodes(contentPaths: string[], expandedPaths?: Set<string>): TreeNode[] {
-  const root: TreeNode[] = [];
+  const children: TreeNode[] = [];
   const pathMap: Record<string, TreeNode> = {};
 
   // Sort so parents always appear before children
@@ -56,7 +56,7 @@ function buildTreeNodes(contentPaths: string[], expandedPaths?: Set<string>): Tr
     const node: TreeNode = {
       name,
       dirPath,
-      depth: parts.length - 1,
+      depth: parts.length,  // depth 1+ (root is 0)
       children: [],
       expanded: expandedPaths ? expandedPaths.has(dirPath) : false,
     };
@@ -64,7 +64,7 @@ function buildTreeNodes(contentPaths: string[], expandedPaths?: Set<string>): Tr
     pathMap[dirPath] = node;
 
     if (parentPath === '') {
-      root.push(node);
+      children.push(node);
     } else if (pathMap[parentPath]) {
       pathMap[parentPath].children.push(node);
     }
@@ -77,9 +77,18 @@ function buildTreeNodes(contentPaths: string[], expandedPaths?: Set<string>): Tr
       sortRecursive(node.children);
     }
   };
-  sortRecursive(root);
+  sortRecursive(children);
 
-  return root;
+  // Wrap everything in a synthetic root node so users can insert top-level children
+  const rootNode: TreeNode = {
+    name: '[root]',
+    dirPath: '',
+    depth: 0,
+    children,
+    expanded: true,
+  };
+
+  return [rootNode];
 }
 
 
@@ -101,11 +110,33 @@ function getVisibleNodes(nodes: TreeNode[]): TreeNode[] {
 }
 
 /**
+ * Expand all ancestor nodes of targetPath so it becomes visible.
+ */
+function expandToPath(nodes: TreeNode[], targetPath: string): void {
+  const parts = targetPath.split('/');
+  for (let len = 1; len <= parts.length; len++) {
+    const ancestorPath = parts.slice(0, len).join('/');
+    const node = findNodeByPath(nodes, ancestorPath);
+    if (node && node.children.length > 0) node.expanded = true;
+  }
+}
+
+function findNodeByPath(nodes: TreeNode[], path: string): TreeNode | undefined {
+  for (const node of nodes) {
+    if (node.dirPath === path) return node;
+    const found = findNodeByPath(node.children, path);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
  * Show the tree management panel.
  */
 export async function showTreePanel(
   state: AppState,
   refreshTree: () => Promise<string[]>,
+  currentDirPath?: string,
 ): Promise<void> {
   logInfo(`TreePanel: showTreePanel called, contentPaths=${state.contentPaths.length}`);
 
@@ -179,10 +210,22 @@ export async function showTreePanel(
     line-height: 1.4;
   `;
   toolbar.innerHTML = `
-    <div>↑↓ Nav | → Expand | ← Collapse | Enter Go</div>
-    <div>Ins New | Del Delete | F2 Rename | Esc Close</div>
+    <div>j/k Nav | l Expand | h Collapse | Enter Go</div>
+    <div>gg Top | u/Esc Close | i/Ins New | dd/Del Delete | F2 Rename</div>
   `;
   panel.appendChild(toolbar);
+
+  // Path indicator
+  const pathBar = document.createElement('div');
+  pathBar.style.cssText = `
+    padding: 4px 10px;
+    border-bottom: 1px solid #444;
+    font-size: 11px;
+    color: #aaa;
+    font-style: italic;
+    min-height: 18px;
+  `;
+  panel.appendChild(pathBar);
 
   // Tree list (scrollable)
   const listContainer = document.createElement('div');
@@ -243,11 +286,26 @@ export async function showTreePanel(
   let inputNode: TreeNode | null = null;
   let pendingDelete: { paths: string[] } | null = null;
   let pendingFocusInput: HTMLInputElement | null = null;
+  let lastKey = '';
+
+  // Auto-select the current page node
+  if (currentDirPath) {
+    expandToPath(treeRoot, currentDirPath);
+    const visibleForInit = getVisibleNodes(treeRoot);
+    const idx = visibleForInit.findIndex(n => n.dirPath === currentDirPath);
+    if (idx >= 0) selectedIndex = idx;
+  }
 
   // Render function
   function render() {
     listContainer.innerHTML = '';
     const visible = getVisibleNodes(treeRoot);
+
+    // Update path indicator
+    const selNode = visible[selectedIndex];
+    pathBar.textContent = selNode?.dirPath
+      ? selNode.dirPath.replace(/\//g, ' / ')
+      : '[root]';
 
     for (let i = 0; i < visible.length; i++) {
       const node = visible[i];
@@ -272,20 +330,20 @@ export async function showTreePanel(
       iconSpan.style.cssText = 'width: 12px; text-align: center; color: #888; flex-shrink: 0;';
       nodeEl.appendChild(iconSpan);
 
-      // Name (or input for edit mode)
+      // Name (or input for rename mode)
       const nameSpan = document.createElement('span');
       nameSpan.className = 'tree-node-name';
       nameSpan.textContent = node.name;
       nameSpan.style.cssText = 'flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
       nodeEl.appendChild(nameSpan);
 
-      // Input field (if editing this node)
-      if (inputMode && inputNode === node) {
+      // Rename input (replaces name inline)
+      if (inputMode === 'rename' && inputNode === node) {
         nameSpan.style.display = 'none';
         const input = document.createElement('input');
         input.type = 'text';
-        input.value = inputMode === 'rename' ? node.name : '';
-        input.placeholder = inputMode === 'new' ? 'Name' : 'Rename';
+        input.value = node.name;
+        input.placeholder = 'Rename';
         input.style.cssText = `
           flex: 1;
           background: #2a2a2a;
@@ -297,33 +355,22 @@ export async function showTreePanel(
           font-size: 13px;
         `;
 
-        const handleSubmit = async (value: string) => {
+        const handleRename = async (value: string) => {
           if (!value.trim()) {
             inputMode = null;
             inputNode = null;
             render();
             return;
           }
-
           try {
-            const wasNew = inputMode === 'new';
-            const parentDirPath = node.dirPath;
-            status.textContent = wasNew ? 'Creating...' : 'Renaming...';
+            status.textContent = 'Renaming...';
             status.style.color = '#888';
-
-            if (wasNew) {
-              await createNode(state.host, state.token, state.owner, state.repo, node.dirPath, value.trim(), state.contentPaths);
-            } else {
-              await renameNode(state.host, state.token, state.owner, state.repo, node.dirPath, value.trim(), state.contentPaths);
-            }
-
+            await renameNode(state.host, state.token, state.owner, state.repo, node.dirPath, value.trim(), state.contentPaths);
             inputMode = null;
             inputNode = null;
             const newPaths = await refreshTree();
             state.contentPaths = newPaths;
-            // Preserve expand states, and auto-expand parent after Insert
             const expanded = getExpandedPaths(treeRoot);
-            if (wasNew) expanded.add(parentDirPath);
             treeRoot = buildTreeNodes(newPaths, expanded);
             selectedIndex = Math.min(selectedIndex, getVisibleNodes(treeRoot).length - 1);
             status.textContent = '';
@@ -336,17 +383,11 @@ export async function showTreePanel(
 
         input.addEventListener('keydown', (e) => {
           e.stopPropagation();
-          if (e.key === 'Enter') {
-            handleSubmit(input.value);
-          } else if (e.key === 'Escape') {
-            inputMode = null;
-            inputNode = null;
-            render();
-          }
+          if (e.key === 'Enter') handleRename(input.value);
+          else if (e.key === 'Escape') { inputMode = null; inputNode = null; render(); }
         });
 
         nodeEl.appendChild(input);
-        // Defer focus — element must be in the DOM first
         pendingFocusInput = input;
       }
 
@@ -356,6 +397,79 @@ export async function showTreePanel(
       });
 
       listContainer.appendChild(nodeEl);
+
+      // For 'new' mode: insert a child input row immediately after the parent node
+      if (inputMode === 'new' && inputNode === node) {
+        const childDepth = node.depth + 1;
+        const inputRow = document.createElement('div');
+        inputRow.style.cssText = `
+          padding: 4px 8px;
+          margin-left: ${childDepth * 16}px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          border-left: 2px solid #0ea5e9;
+          background: #1a2a3a;
+        `;
+
+        const iconSpan = document.createElement('span');
+        iconSpan.textContent = '·';
+        iconSpan.style.cssText = 'width: 12px; text-align: center; color: #0ea5e9; flex-shrink: 0;';
+        inputRow.appendChild(iconSpan);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = '';
+        input.placeholder = 'New name';
+        input.style.cssText = `
+          flex: 1;
+          background: #2a2a2a;
+          color: #e0e0e0;
+          border: 1px solid #0ea5e9;
+          border-radius: 2px;
+          padding: 2px 4px;
+          font-family: monospace;
+          font-size: 13px;
+        `;
+
+        const handleCreate = async (value: string) => {
+          if (!value.trim()) {
+            inputMode = null;
+            inputNode = null;
+            render();
+            return;
+          }
+          try {
+            const parentDirPath = node.dirPath;
+            status.textContent = 'Creating...';
+            status.style.color = '#888';
+            await createNode(state.host, state.token, state.owner, state.repo, parentDirPath, value.trim(), state.contentPaths);
+            inputMode = null;
+            inputNode = null;
+            const newPaths = await refreshTree();
+            state.contentPaths = newPaths;
+            const expanded = getExpandedPaths(treeRoot);
+            expanded.add(parentDirPath);
+            treeRoot = buildTreeNodes(newPaths, expanded);
+            selectedIndex = Math.min(selectedIndex, getVisibleNodes(treeRoot).length - 1);
+            status.textContent = '';
+            render();
+          } catch (err) {
+            status.textContent = err instanceof Error ? err.message : String(err);
+            status.style.color = '#f87171';
+          }
+        };
+
+        input.addEventListener('keydown', (e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') handleCreate(input.value);
+          else if (e.key === 'Escape') { inputMode = null; inputNode = null; render(); }
+        });
+
+        inputRow.appendChild(input);
+        listContainer.appendChild(inputRow);
+        pendingFocusInput = input;
+      }
     }
 
     // Focus the input after all elements are in the DOM
@@ -363,6 +477,12 @@ export async function showTreePanel(
       pendingFocusInput.focus();
       pendingFocusInput.select();
       pendingFocusInput = null;
+    }
+
+    // Scroll selected node into view
+    const selectedEl = listContainer.querySelector('.tree-node-selected');
+    if (selectedEl) {
+      selectedEl.scrollIntoView({ block: 'nearest' });
     }
   }
 
@@ -382,21 +502,24 @@ export async function showTreePanel(
       return;
     }
 
-    if (e.key === 'ArrowUp') {
+    if (e.key === 'ArrowUp' || e.key === 'k') {
       e.preventDefault();
       selectedIndex = Math.max(0, selectedIndex - 1);
+      lastKey = '';
       render();
-    } else if (e.key === 'ArrowDown') {
+    } else if (e.key === 'ArrowDown' || e.key === 'j') {
       e.preventDefault();
       selectedIndex = Math.min(visible.length - 1, selectedIndex + 1);
+      lastKey = '';
       render();
-    } else if (e.key === 'ArrowRight') {
+    } else if (e.key === 'ArrowRight' || e.key === 'l') {
       e.preventDefault();
       if (selectedNode && selectedNode.children.length > 0) {
         selectedNode.expanded = true;
         render();
       }
-    } else if (e.key === 'ArrowLeft') {
+      lastKey = '';
+    } else if (e.key === 'ArrowLeft' || e.key === 'h') {
       e.preventDefault();
       if (selectedNode) {
         if (selectedNode.expanded) {
@@ -412,31 +535,41 @@ export async function showTreePanel(
           }
         }
       }
+      lastKey = '';
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedNode) {
+      if (selectedNode && selectedNode.dirPath !== '') {
         location.hash = `#/${selectedNode.dirPath}`;
         overlay.remove();
       }
-    } else if (e.key === 'Insert') {
+      lastKey = '';
+    } else if (e.key === 'Insert' || e.key === 'i') {
       e.preventDefault();
       if (selectedNode && !pendingDelete) {
+        // Auto-expand the selected node so user can see the new child input row
+        selectedNode.expanded = true;
         inputMode = 'new';
         inputNode = selectedNode;
         render();
       }
-    } else if (e.key === 'Delete') {
+      lastKey = '';
+    } else if (e.key === 'Delete' || (e.key === 'd' && lastKey === 'd')) {
       e.preventDefault();
       if (selectedNode && selectedNode.dirPath !== '' && !inputMode) {
         handleDelete(selectedNode);
       }
+      lastKey = '';
+    } else if (e.key === 'd') {
+      e.preventDefault();
+      lastKey = 'd';
     } else if (e.key === 'F2') {
       e.preventDefault();
-      if (selectedNode && !pendingDelete && !inputMode) {
+      if (selectedNode && selectedNode.dirPath !== '' && !pendingDelete && !inputMode) {
         inputMode = 'rename';
         inputNode = selectedNode;
         render();
       }
+      lastKey = '';
     } else if (e.key === 'Escape') {
       e.preventDefault();
       if (inputMode) {
@@ -449,14 +582,32 @@ export async function showTreePanel(
       } else {
         overlay.remove();
       }
+      lastKey = '';
     } else if (e.key === 'Home') {
       e.preventDefault();
       selectedIndex = 0;
+      lastKey = '';
       render();
     } else if (e.key === 'End') {
       e.preventDefault();
       selectedIndex = visible.length - 1;
+      lastKey = '';
       render();
+    } else if (e.key === 'g') {
+      e.preventDefault();
+      if (lastKey === 'g') {
+        selectedIndex = 0;
+        lastKey = '';
+        render();
+      } else {
+        lastKey = 'g';
+      }
+    } else if (e.key === 'u') {
+      e.preventDefault();
+      overlay.remove();
+      lastKey = '';
+    } else {
+      lastKey = '';
     }
   }
 
@@ -587,4 +738,10 @@ export async function showTreePanel(
   render();
   renderConfirmation();
   document.body.appendChild(overlay);
+
+  // Scroll selected node into view now that the panel is in the DOM
+  const initialSelected = listContainer.querySelector('.tree-node-selected');
+  if (initialSelected) {
+    initialSelected.scrollIntoView({ block: 'center' });
+  }
 }

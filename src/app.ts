@@ -232,7 +232,7 @@ function doRender(route: Route, content: string): void {
   const doc = transform(parsed, title);
 
   const handleTreePanel = () => {
-    showTreePanel(getAppState(), refreshTree);
+    showTreePanel(getAppState(), refreshTree, route.dirPath);
   };
 
   renderPage(app, doc, route, {
