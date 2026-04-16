@@ -203,6 +203,10 @@ function isInputFocused(): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
+// Module-level controller: aborted and replaced on each initDropZone call so
+// document-level paste listeners don't accumulate across page renders.
+let pasteAbort: AbortController | null = null;
+
 /** Initialize drag-and-drop (URL only) and paste (text with links) on the page. */
 export function initDropZone(container: HTMLElement, config: DropConfig): void {
   const scrollable = container.querySelector('.scrollable-content') as HTMLElement | null;
@@ -212,6 +216,9 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
   if (config.route.kind !== 'browse') return;
 
   // --- URL drag-and-drop ---
+  //
+  // Listeners are registered with capture:true so they fire before <a> elements'
+  // native drag-and-drop behavior (which would otherwise navigate to the dropped URL).
 
   let dragCounter = 0;
 
@@ -219,12 +226,12 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
     e.preventDefault();
     dragCounter++;
     scrollable.classList.add('drop-target');
-  });
+  }, { capture: true });
 
   scrollable.addEventListener('dragover', (e) => {
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-  });
+  }, { capture: true });
 
   scrollable.addEventListener('dragleave', () => {
     dragCounter--;
@@ -232,10 +239,11 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
       dragCounter = 0;
       scrollable.classList.remove('drop-target');
     }
-  });
+  }, { capture: true });
 
   scrollable.addEventListener('drop', async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounter = 0;
     scrollable.classList.remove('drop-target');
 
@@ -252,9 +260,14 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
       const line = buildEntryLine(result.title, result.url, result.comment);
       await insertEntries([line], config, 'Drop');
     }
-  });
+  }, { capture: true });
 
   // --- Paste handler (Ctrl+V with text containing links) ---
+  //
+  // Abort any previous paste listener (from a prior render), then create a new one.
+
+  pasteAbort?.abort();
+  pasteAbort = new AbortController();
 
   document.addEventListener('paste', async (e: ClipboardEvent) => {
     if (isInputFocused()) return;
@@ -275,7 +288,7 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
       l.text && l.text !== l.url ? `- ${l.text} ${l.url}` : `- ${l.url}`,
     );
     await insertEntries(lines, config, 'Paste');
-  });
+  }, { signal: pasteAbort!.signal });
 }
 
 function truncate(s: string, max: number): string {

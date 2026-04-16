@@ -690,10 +690,10 @@ body:has(.editor-screen) {
   bottom: 10px;
   right: 60px;
   font-size: 10px;
-  opacity: 0.3;
+  opacity: 0.75;
   pointer-events: none;
   z-index: 9999;
-  color: #999;
+  color: #ccc;
 }
 
 /* Tree panel modal */
