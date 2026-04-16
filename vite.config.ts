@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite';
+import { execSync } from 'child_process';
 import pkg from './package.json';
+
+const buildHash = execSync('../scripts/source-hash.sh').toString().trim();
 
 const base = process.env.VITE_BASE;
 if (!base) {
@@ -16,7 +19,18 @@ export default defineConfig({
   base,
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_HASH__: JSON.stringify(buildHash),
   },
+  plugins: [{
+    name: 'version-json',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ version: pkg.version, hash: buildHash }),
+      });
+    },
+  }],
   build: {
     sourcemap: true,
   },

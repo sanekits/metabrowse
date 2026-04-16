@@ -9,3 +9,4 @@ badge.textContent = `v${APP_VERSION}`;
 document.body.appendChild(badge);
 
 init();
+
