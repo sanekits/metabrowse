@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Metabrowse is a browser-side single-page application (SPA) for organizing and browsing bookmarks. It fetches markdown content from a GitHub repository at runtime via the GitHub API, parses it in the browser, and renders interactive HTML with collapsible groups, search, and inline editing.
+Metabrowse is a browser-side single-page application (SPA) for organizing and browsing bookmarks. It fetches markdown content from a GitHub repository at runtime via the GitHub API, parses it in the browser, and renders interactive HTML with collapsible sections, grouped links, search, and inline editing.
 
 **Architecture**: Code and content are separated into different repositories:
 - **Code repository** (this repo): TypeScript SPA built with Vite, deployed to GitHub Pages
 - **Content repositories** (e.g., `metabrowse-links`): Contain `text/` directories with markdown files. No build step — the SPA reads them directly via the GitHub Contents API.
 
 Key features:
-1. **Collapsible link groups** - organize links into expandable `<details>` sections
+1. **Collapsible sections** - `## headers` render as expandable `<details>` sections; groups and standalone links organize content within them
 2. **Smart tab reuse** - deterministic SHA256-based targets for external URLs; internal navigation stays in the same tab
 3. **Multi-level hierarchy** - client-side hash router maps paths like `#/topic/subtopic` to `text/topic/subtopic/README.md`
 4. **Clickable breadcrumb navigation** - generated from the current hash path
@@ -49,11 +49,13 @@ The SPA implements a modular pipeline that runs entirely in the browser:
 - Discovers child directories via the GitHub Trees API
 
 ### Parser (`parser.ts`)
-- Extracts structured data (links, groups) from markdown text
-- Supports: plain URLs, markdown links, `{target="..."}` overrides, raw HTML `<a>` tags, title+URL format
-- Detects groups: lines starting with `- ` containing no URL become group headers
-- Extracts inline comments: `# comment text` after links/groups
-- Returns `ParsedDocument` with ungrouped links and groups
+- Extracts structured data (sections, groups, links) from markdown text
+- **Sections**: `## Header` lines create collapsible containers that hold groups and links
+- **Groups**: `- Text` lines containing no URL become group headers; indented lines below are children
+- **Links**: plain URLs, markdown links, `{target="..."}` overrides, raw HTML `<a>` tags, title+URL format
+- Extracts inline comments: `# comment text` after links/groups/sections
+- `# Title` (H1) lines are silently ignored
+- Returns `ParsedDocument` with top-level items (sections, groups, and standalone links)
 
 ### Transformer (`transformer.ts`)
 - Converts parsed data to render-ready structures
@@ -63,7 +65,9 @@ The SPA implements a modular pipeline that runs entirely in the browser:
 
 ### Renderer (`renderer.ts`)
 - Builds DOM elements from transformed data
-- Uses `<details>`/`<summary>` for collapsible groups
+- **Sections** render as collapsible `<details>`/`<summary>` (open by default)
+- **Groups** render as non-collapsible `<div class="subgroup">` with a header and child link list
+- **Link groups** (consecutive standalone links) render as a flat `<ul class="links">`
 - Renders breadcrumbs, child directory buttons, edit links
 
 ### Router (`router.ts`)
@@ -138,7 +142,23 @@ No build step in the content repo — the metabrowse SPA reads `text/` directly 
 
 ## Markdown Syntax for Content Files
 
-**Groups** (collapsible sections):
+The parser recognizes three entity types: **sections**, **groups**, and **links**.
+
+### Sections (collapsible)
+
+Lines starting with `## ` create collapsible `<details>` sections (open by default). Everything following a `## ` header until the next `## ` header (or end of file) belongs to that section.
+
+```markdown
+## Section Name # Optional comment
+- https://link1.com
+- Group Name
+  - https://link2.com
+```
+
+### Groups (non-collapsible)
+
+A bullet line (`- `) containing no URL becomes a group header. Indented lines below it are its children. Groups render as a labeled block with a header and a child link list -- they are **not** collapsible.
+
 ```markdown
 - Group Name # Optional comment
   - https://link1.com # Optional comment
@@ -146,7 +166,13 @@ No build step in the content repo — the metabrowse SPA reads `text/` directly 
   - [Link text](https://link3.com)
 ```
 
-**Link formats**:
+A group ends when indentation returns to the group's level or lower (e.g., the next top-level `- ` line or a new `## ` header).
+
+### Links
+
+Links can appear standalone (at top level or inside a section) or as children inside a group. Consecutive standalone links are rendered together as a flat list.
+
+**Supported link formats**:
 - Plain URL: `- https://example.com`
 - With title: `- Link title https://example.com`
 - Markdown: `- [Link text](https://example.com)`
@@ -154,9 +180,15 @@ No build step in the content repo — the metabrowse SPA reads `text/` directly 
 - Raw HTML: `- <a href="https://example.com">Text</a>`
 - Any scheme: `- chrome://settings`, `- mailto:user@example.com`
 
-**Group detection rule**: A line starting with `- ` containing no URL is a group header. Indented lines below it become children.
+### Comments
 
-**Child directories**: Subdirectories containing README.md are automatically discovered and displayed as navigation buttons. No manual linking needed.
+Any entity (section, group, or link) can have an inline comment after ` # ` (space-hash-space). The `#` must be preceded by whitespace to distinguish from URL fragments like `page#section`.
+
+### Other
+
+- `# Title` (H1) lines are silently ignored by the parser
+- Blank lines are skipped
+- **Child directories**: Subdirectories containing README.md are automatically discovered and displayed as navigation buttons. No manual linking needed.
 
 ## Development Workflow
 
