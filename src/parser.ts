@@ -10,9 +10,17 @@ export interface Link {
   type: 'link';
 }
 
-export interface Group {
+export interface Sublevel {
   name: string;
   links: Link[];
+  indentLevel: number;
+  comment: string | null;
+  type: 'sublevel';
+}
+
+export interface Group {
+  name: string;
+  children: Array<Link | Sublevel>;
   indentLevel: number;
   comment: string | null;
   type: 'group';
@@ -157,8 +165,20 @@ export function parseContent(content: string): ParsedDocument {
   let currentSection: Section | null = null;
   let currentGroup: Group | null = null;
   let currentGroupIndent = -1;
+  let currentSublevel: Sublevel | null = null;
+  let sublevelChildIndent = -1;
+
+  function flushSublevel() {
+    if (currentSublevel === null) return;
+    if (currentGroup !== null) {
+      currentGroup.children.push(currentSublevel);
+    }
+    currentSublevel = null;
+    sublevelChildIndent = -1;
+  }
 
   function flushGroup() {
+    flushSublevel();
     if (currentGroup === null) return;
     if (currentSection !== null) {
       currentSection.items.push(currentGroup);
@@ -206,15 +226,57 @@ export function parseContent(content: string): ParsedDocument {
       continue;
     }
 
+    // Check for * sublevel marker
+    if (stripped.startsWith('* ')) {
+      if (currentGroup && indent > currentGroupIndent) {
+        flushSublevel();
+        const sublevelText = stripped.slice(2).trim();
+        const [sublevelName, sublevelComment] = extractComment(sublevelText);
+        currentSublevel = {
+          name: sublevelName,
+          links: [],
+          indentLevel: indent,
+          comment: sublevelComment,
+          type: 'sublevel',
+        };
+      } else {
+        // Orphan sublevel — not inside a group
+        flushGroup();
+        addItem(makeLink({
+          url: '#',
+          rawHtml: `<code>${stripped}</code>`,
+          indentLevel: indent,
+          comment: null,
+        }));
+      }
+      continue;
+    }
+
     // Try to parse the line as a link
     const link = parseLinkLine(line, indent);
 
     if (link) {
-      // Check if this link belongs to current group
-      if (currentGroup && indent > currentGroupIndent) {
-        currentGroup.links.push(link);
+      if (currentSublevel) {
+        // Inside a sublevel — check indentation
+        if (sublevelChildIndent === -1) {
+          // First child establishes expected indent
+          sublevelChildIndent = indent;
+          currentSublevel.links.push(link);
+        } else if (indent === sublevelChildIndent) {
+          currentSublevel.links.push(link);
+        } else {
+          // Indentation violation — close sublevel, fall through
+          flushSublevel();
+          if (currentGroup && indent > currentGroupIndent) {
+            currentGroup.children.push(link);
+          } else {
+            flushGroup();
+            addItem(link);
+          }
+        }
+      } else if (currentGroup && indent > currentGroupIndent) {
+        currentGroup.children.push(link);
       } else {
-        // Exited the group
         flushGroup();
         addItem(link);
       }
@@ -226,7 +288,7 @@ export function parseContent(content: string): ParsedDocument {
       const [groupName, groupComment] = extractComment(groupText);
       currentGroup = {
         name: groupName,
-        links: [],
+        children: [],
         indentLevel: indent,
         comment: groupComment,
         type: 'group',

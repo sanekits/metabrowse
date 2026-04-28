@@ -1,6 +1,6 @@
 /** Renderer: Build DOM from transformed HTMLDocument, replicating the Jinja2 template structure. */
 
-import type { HTMLDocument, HTMLLink, HTMLGroup, HTMLLinkGroup, HTMLSection } from './transformer.ts';
+import type { HTMLDocument, HTMLLink, HTMLSublevel, HTMLGroup, HTMLLinkGroup, HTMLSection } from './transformer.ts';
 import type { Route } from './router.ts';
 import { createLogViewer } from './logging-client.ts';
 
@@ -116,6 +116,26 @@ function renderLink(link: HTMLLink): HTMLLIElement {
   return li;
 }
 
+// ── Sublevel rendering ──────────────────────────────────────────────
+
+function renderSublevel(sublevel: HTMLSublevel): HTMLDivElement {
+  const div = el('div', { class: 'sublevel' });
+
+  const header = el('div', { class: 'sublevel-header' }, sublevel.name);
+  if (sublevel.comment) {
+    header.appendChild(el('span', { class: 'group-comment' }, '\u2139 ' + sublevel.comment));
+  }
+  div.appendChild(header);
+
+  const ul = el('ul', { class: 'sublevel-links' });
+  for (const link of sublevel.links) {
+    ul.appendChild(renderLink(link));
+  }
+  div.appendChild(ul);
+
+  return div;
+}
+
 // ── Group rendering ─────────────────────────────────────────────────
 
 function renderGroup(group: HTMLGroup): HTMLDivElement {
@@ -127,11 +147,24 @@ function renderGroup(group: HTMLGroup): HTMLDivElement {
   }
   div.appendChild(header);
 
-  const ul = el('ul', { class: 'group-links' });
-  for (const link of group.links) {
-    ul.appendChild(renderLink(link));
+  let pendingLinks: HTMLLink[] = [];
+  function flushLinks() {
+    if (pendingLinks.length === 0) return;
+    const ul = el('ul', { class: 'group-links' });
+    for (const link of pendingLinks) ul.appendChild(renderLink(link));
+    div.appendChild(ul);
+    pendingLinks = [];
   }
-  div.appendChild(ul);
+
+  for (const child of group.children) {
+    if (child.type === 'sublevel') {
+      flushLinks();
+      div.appendChild(renderSublevel(child));
+    } else {
+      pendingLinks.push(child);
+    }
+  }
+  flushLinks();
 
   return div;
 }

@@ -168,6 +168,22 @@ A bullet line (`- `) containing no URL becomes a group header. Indented lines be
 
 A group ends when indentation returns to the group's level or lower (e.g., the next top-level `- ` line or a new `## ` header).
 
+### Sublevels (subdivisions within a group)
+
+A `* ` line inside a group creates a sublevel — a titled, non-collapsible subdivision. Indented lines below are its child links.
+
+```markdown
+- Group Name
+    * Sublevel Title # Optional comment
+        - https://link1.com
+        - https://link2.com
+    * Another Sublevel
+        - https://link3.com
+    - https://direct-group-link.com
+```
+
+Sublevels close when indentation changes from the established child level, a new `* ` or `- ` marker appears at the same level, or a new section starts. A `* ` line outside a group (orphan) renders as `<code>` to signal an editing error. Sublevels do not nest.
+
 ### Links
 
 Links can appear standalone (at top level or inside a section) or as children inside a group. Consecutive standalone links are rendered together as a flat list.

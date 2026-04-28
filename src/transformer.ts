@@ -1,6 +1,6 @@
 /** Transformer module: Convert parsed structure to HTML-ready data. */
 
-import type { ParsedDocument, Link, Group, Section } from './parser.ts';
+import type { ParsedDocument, Link, Group, Sublevel, Section } from './parser.ts';
 
 export interface HTMLLink {
   url: string;
@@ -12,9 +12,16 @@ export interface HTMLLink {
   type: 'link';
 }
 
-export interface HTMLGroup {
+export interface HTMLSublevel {
   name: string;
   links: HTMLLink[];
+  comment: string | null;
+  type: 'sublevel';
+}
+
+export interface HTMLGroup {
+  name: string;
+  children: Array<HTMLLink | HTMLSublevel>;
   comment: string | null;
   type: 'group';
 }
@@ -109,11 +116,22 @@ function transformLink(link: Link): HTMLLink {
   };
 }
 
+function transformSublevel(sublevel: Sublevel): HTMLSublevel {
+  return {
+    name: sublevel.name,
+    links: sublevel.links.map(transformLink),
+    comment: sublevel.comment,
+    type: 'sublevel',
+  };
+}
+
 function transformGroup(group: Group): HTMLGroup {
-  const htmlLinks = group.links.map(transformLink);
+  const children = group.children.map(item =>
+    item.type === 'sublevel' ? transformSublevel(item) : transformLink(item)
+  );
   return {
     name: group.name,
-    links: htmlLinks,
+    children,
     comment: group.comment,
     type: 'group',
   };

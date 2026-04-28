@@ -44,8 +44,14 @@ function extractLinksFromItems(
     if (item.type === 'section') {
       links.push(...extractLinksFromItems(item.items, ''));
     } else if (item.type === 'group') {
-      for (const link of item.links) {
-        links.push({ text: link.text, url: link.url, group: item.name, comment: link.comment ?? '' });
+      for (const child of item.children) {
+        if (child.type === 'sublevel') {
+          for (const link of child.links) {
+            links.push({ text: link.text, url: link.url, group: child.name, comment: link.comment ?? '' });
+          }
+        } else {
+          links.push({ text: child.text, url: child.url, group: item.name, comment: child.comment ?? '' });
+        }
       }
     } else if (item.type === 'link_group') {
       for (const link of item.links) {
@@ -64,6 +70,11 @@ function extractNames(items: Array<HTMLSection | HTMLGroup | HTMLLinkGroup>, typ
     }
     if (item.type === 'section') {
       names.push(...extractNames((item as HTMLSection).items, type));
+    }
+    if (item.type === 'group') {
+      for (const child of item.children) {
+        if (child.type === 'sublevel') names.push(child.name);
+      }
     }
   }
   return names;
@@ -124,10 +135,10 @@ function filterLinks(ul: HTMLUListElement, query: string): boolean {
   return anyMatch;
 }
 
-function filterSubgroup(sg: HTMLDivElement, query: string): boolean {
-  const headerEl = sg.querySelector('.subgroup-header');
+function filterSublevel(sl: HTMLDivElement, query: string): boolean {
+  const headerEl = sl.querySelector('.sublevel-header');
   const headerMatch = headerEl ? getSearchText(headerEl).includes(query) : false;
-  const linksUl = sg.querySelector<HTMLUListElement>('.group-links');
+  const linksUl = sl.querySelector<HTMLUListElement>('.sublevel-links');
   let anyLinkMatch = false;
   if (linksUl) {
     for (const li of linksUl.querySelectorAll<HTMLLIElement>(':scope > li')) {
@@ -140,6 +151,34 @@ function filterSubgroup(sg: HTMLDivElement, query: string): boolean {
       if (match) anyLinkMatch = true;
     }
   }
+  const visible = headerMatch || anyLinkMatch;
+  sl.style.display = visible ? '' : 'none';
+  return visible;
+}
+
+function filterSubgroup(sg: HTMLDivElement, query: string): boolean {
+  const headerEl = sg.querySelector('.subgroup-header');
+  const headerMatch = headerEl ? getSearchText(headerEl).includes(query) : false;
+  let anyLinkMatch = false;
+
+  // Filter direct link lists
+  sg.querySelectorAll<HTMLUListElement>(':scope > .group-links').forEach(linksUl => {
+    for (const li of linksUl.querySelectorAll<HTMLLIElement>(':scope > li')) {
+      let match = getSearchText(li).includes(query);
+      if (!match) {
+        const a = li.querySelector('a');
+        if (a?.href?.toLowerCase().includes(query)) match = true;
+      }
+      li.style.display = (match || headerMatch) ? '' : 'none';
+      if (match) anyLinkMatch = true;
+    }
+  });
+
+  // Filter sublevel children
+  sg.querySelectorAll<HTMLDivElement>(':scope > .sublevel').forEach(sl => {
+    if (filterSublevel(sl, query)) anyLinkMatch = true;
+  });
+
   const visible = headerMatch || anyLinkMatch;
   sg.style.display = visible ? '' : 'none';
   return visible;
@@ -202,6 +241,10 @@ export function initSearch(container: HTMLElement, getSearchIndex: () => SearchE
       s.querySelectorAll<HTMLDivElement>('.subgroup').forEach(sg => {
         sg.style.display = '';
         sg.querySelectorAll<HTMLLIElement>('.group-links > li').forEach(li => { li.style.display = ''; });
+        sg.querySelectorAll<HTMLDivElement>('.sublevel').forEach(sl => {
+          sl.style.display = '';
+          sl.querySelectorAll<HTMLLIElement>('.sublevel-links > li').forEach(li => { li.style.display = ''; });
+        });
       });
       s.querySelectorAll<HTMLUListElement>('.links').forEach(ul => {
         ul.style.display = '';
@@ -211,6 +254,10 @@ export function initSearch(container: HTMLElement, getSearchIndex: () => SearchE
     topSubgroups.forEach(sg => {
       sg.style.display = '';
       sg.querySelectorAll<HTMLLIElement>('.group-links > li').forEach(li => { li.style.display = ''; });
+      sg.querySelectorAll<HTMLDivElement>('.sublevel').forEach(sl => {
+        sl.style.display = '';
+        sl.querySelectorAll<HTMLLIElement>('.sublevel-links > li').forEach(li => { li.style.display = ''; });
+      });
     });
     topLinkGroups.forEach(ul => {
       ul.style.display = '';

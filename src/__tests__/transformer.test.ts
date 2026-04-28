@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseContent } from '../parser.ts';
 import { transform, generateTarget } from '../transformer.ts';
-import type { HTMLSection, HTMLGroup, HTMLLinkGroup } from '../transformer.ts';
+import type { HTMLSection, HTMLGroup, HTMLSublevel, HTMLLinkGroup } from '../transformer.ts';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures');
 
@@ -178,7 +178,7 @@ describe('transform – sections and groups', () => {
     expect(group.type).toBe('group');
     expect(group.name).toBe('Resources');
     expect(group.comment).toBe('Important');
-    expect(group.links).toHaveLength(2);
+    expect(group.children).toHaveLength(2);
   });
 
   it('preserves comments through transform', () => {
@@ -211,5 +211,58 @@ describe('transform – real fixtures', () => {
     expect(doc.items.length).toBeGreaterThan(0);
     const hasGroups = doc.items.some(i => i.type === 'group');
     expect(hasGroups).toBe(true);
+  });
+
+  it('transforms sublevels.md end-to-end', () => {
+    const content = readFixture('sublevels.md');
+    const parsed = parseContent(content);
+    const doc = transform(parsed, 'Sublevels');
+    expect(doc.title).toBe('Sublevels');
+    expect(doc.items.length).toBeGreaterThan(0);
+  });
+});
+
+// ── transform – sublevels ──────────────────────────────────────────
+
+describe('transform – sublevels', () => {
+  it('transforms sublevel links with targets', () => {
+    const content = `- My Group
+    * Sub
+        - https://example.com`;
+    const parsed = parseContent(content);
+    const doc = transform(parsed, 'Test');
+    const group = doc.items[0] as HTMLGroup;
+    const sublevel = group.children[0] as HTMLSublevel;
+    expect(sublevel.type).toBe('sublevel');
+    expect(sublevel.links).toHaveLength(1);
+    expect(sublevel.links[0].target).toMatch(/^[0-9a-f]{8}$/);
+    expect(sublevel.links[0].urlHash).toBe(sublevel.links[0].target);
+  });
+
+  it('preserves mixed children ordering through transform', () => {
+    const content = `- Group
+    * Sub A
+        - https://a.com
+    - https://direct.com
+    * Sub B
+        - https://b.com`;
+    const parsed = parseContent(content);
+    const doc = transform(parsed, 'Test');
+    const group = doc.items[0] as HTMLGroup;
+    expect(group.children).toHaveLength(3);
+    expect(group.children[0].type).toBe('sublevel');
+    expect(group.children[1].type).toBe('link');
+    expect(group.children[2].type).toBe('sublevel');
+  });
+
+  it('preserves sublevel comment through transform', () => {
+    const content = `- Group
+    * Docs # important
+        - https://docs.example.com`;
+    const parsed = parseContent(content);
+    const doc = transform(parsed, 'Test');
+    const group = doc.items[0] as HTMLGroup;
+    const sublevel = group.children[0] as HTMLSublevel;
+    expect(sublevel.comment).toBe('important');
   });
 });

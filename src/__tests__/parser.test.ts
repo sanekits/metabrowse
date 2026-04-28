@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseContent, extractComment } from '../parser.ts';
-import type { Link, Group, Section } from '../parser.ts';
+import type { Link, Group, Sublevel, Section } from '../parser.ts';
 
 const fixturesDir = join(import.meta.dirname, 'fixtures');
 
@@ -137,7 +137,7 @@ describe('parseContent – groups', () => {
     const group = doc.items[0] as Group;
     expect(group.type).toBe('group');
     expect(group.name).toBe('My Group');
-    expect(group.links).toHaveLength(2);
+    expect(group.children).toHaveLength(2);
   });
 
   it('extracts group comments', () => {
@@ -156,7 +156,7 @@ describe('parseContent – groups', () => {
     const doc = parseContent(content);
     expect(doc.items).toHaveLength(2);
     expect((doc.items[0] as Group).type).toBe('group');
-    expect((doc.items[0] as Group).links).toHaveLength(1);
+    expect((doc.items[0] as Group).children).toHaveLength(1);
     expect((doc.items[1] as Link).type).toBe('link');
     expect((doc.items[1] as Link).url).toBe('https://standalone.com');
   });
@@ -258,6 +258,139 @@ describe('parseContent – edge cases', () => {
   });
 });
 
+// ── Sublevels ──────────────────────────────────────────────────────
+
+describe('parseContent – sublevels', () => {
+  it('recognizes * sublevel marker inside a group', () => {
+    const content = `- My Group
+    * Sub Title
+        - https://example.com
+        - https://other.com`;
+    const doc = parseContent(content);
+    expect(doc.items).toHaveLength(1);
+    const group = doc.items[0] as Group;
+    expect(group.children).toHaveLength(1);
+    const sublevel = group.children[0] as Sublevel;
+    expect(sublevel.type).toBe('sublevel');
+    expect(sublevel.name).toBe('Sub Title');
+    expect(sublevel.links).toHaveLength(2);
+  });
+
+  it('handles multiple sublevels in one group', () => {
+    const content = `- Links
+    * Video
+        - https://youtube.com
+    * News
+        - https://cnn.com
+        - https://bbc.com`;
+    const doc = parseContent(content);
+    const group = doc.items[0] as Group;
+    expect(group.children).toHaveLength(2);
+    expect((group.children[0] as Sublevel).name).toBe('Video');
+    expect((group.children[0] as Sublevel).links).toHaveLength(1);
+    expect((group.children[1] as Sublevel).name).toBe('News');
+    expect((group.children[1] as Sublevel).links).toHaveLength(2);
+  });
+
+  it('preserves mixed children ordering (sublevels + direct links)', () => {
+    const content = `- My Group
+    * Sub A
+        - https://a.com
+    - https://direct.com
+    * Sub B
+        - https://b.com`;
+    const doc = parseContent(content);
+    const group = doc.items[0] as Group;
+    expect(group.children).toHaveLength(3);
+    expect(group.children[0].type).toBe('sublevel');
+    expect(group.children[1].type).toBe('link');
+    expect(group.children[2].type).toBe('sublevel');
+  });
+
+  it('extracts sublevel comments', () => {
+    const content = `- Resources
+    * Docs # the good stuff
+        - https://docs.python.org`;
+    const doc = parseContent(content);
+    const group = doc.items[0] as Group;
+    const sublevel = group.children[0] as Sublevel;
+    expect(sublevel.name).toBe('Docs');
+    expect(sublevel.comment).toBe('the good stuff');
+  });
+
+  it('renders orphan sublevel as code (no parent group)', () => {
+    const content = `* No parent group
+- https://example.com`;
+    const doc = parseContent(content);
+    expect(doc.items).toHaveLength(2);
+    const orphan = doc.items[0] as Link;
+    expect(orphan.type).toBe('link');
+    expect(orphan.rawHtml).toBe('<code>* No parent group</code>');
+  });
+
+  it('closes sublevel on indentation violation', () => {
+    const content = `- Tools
+    * Editors
+        - https://code.visualstudio.com
+            - https://misindented.com
+        - https://vim.org`;
+    const doc = parseContent(content);
+    const group = doc.items[0] as Group;
+    // Sublevel "Editors" should contain only VS Code (first child at indent 8)
+    // The misindented line (indent 12) triggers close; it becomes a direct group child
+    // vim.org (indent 8) is no longer in a sublevel, so it's also a direct group child
+    const sublevel = group.children[0] as Sublevel;
+    expect(sublevel.type).toBe('sublevel');
+    expect(sublevel.links).toHaveLength(1);
+    expect(sublevel.links[0].url).toBe('https://code.visualstudio.com');
+    // misindented + vim.org become direct group children
+    expect(group.children).toHaveLength(3);
+    expect((group.children[1] as Link).url).toBe('https://misindented.com');
+    expect((group.children[2] as Link).url).toBe('https://vim.org');
+  });
+
+  it('closes sublevel when new group starts', () => {
+    const content = `- Group A
+    * Sub
+        - https://a.com
+- Group B
+    - https://b.com`;
+    const doc = parseContent(content);
+    expect(doc.items).toHaveLength(2);
+    const groupA = doc.items[0] as Group;
+    expect(groupA.children).toHaveLength(1);
+    expect((groupA.children[0] as Sublevel).links).toHaveLength(1);
+    const groupB = doc.items[1] as Group;
+    expect(groupB.children).toHaveLength(1);
+  });
+
+  it('closes sublevel when new section starts', () => {
+    const content = `## Section 1
+- My Group
+    * Sub
+        - https://a.com
+## Section 2
+- https://b.com`;
+    const doc = parseContent(content);
+    expect(doc.items).toHaveLength(2);
+    const section1 = doc.items[0] as Section;
+    const group = section1.items[0] as Group;
+    expect((group.children[0] as Sublevel).links).toHaveLength(1);
+  });
+
+  it('flushes sublevel at EOF', () => {
+    const content = `- Dev Tools
+    * Editors
+        - https://code.visualstudio.com`;
+    const doc = parseContent(content);
+    const group = doc.items[0] as Group;
+    expect(group.children).toHaveLength(1);
+    const sublevel = group.children[0] as Sublevel;
+    expect(sublevel.name).toBe('Editors');
+    expect(sublevel.links).toHaveLength(1);
+  });
+});
+
 // ── Real fixture files ──────────────────────────────────────────────
 
 describe('parseContent – real fixtures', () => {
@@ -281,7 +414,7 @@ describe('parseContent – real fixtures', () => {
     const groups = doc.items.filter(i => i.type === 'group') as Group[];
     expect(groups.length).toBeGreaterThan(0);
     for (const group of groups) {
-      expect(group.links.length).toBeGreaterThan(0);
+      expect(group.children.length).toBeGreaterThan(0);
     }
   });
 
@@ -313,5 +446,30 @@ describe('parseContent – real fixtures', () => {
     const link = unsorted.items[0] as Link;
     expect(link.url).toContain('#gid=');
     expect(link.comment).toBe('Lots of tasks and notes, archive');
+  });
+
+  it('parses sublevels.md with sublevels and orphan', () => {
+    const content = readFixture('sublevels.md');
+    const doc = parseContent(content);
+    // 1 section ("Development") — orphan * line is inside the section (sections span to next ## or EOF)
+    expect(doc.items).toHaveLength(1);
+    const section = doc.items[0] as Section;
+    expect(section.type).toBe('section');
+    // Section has: Frontend group, Backend group, orphan link
+    expect(section.items).toHaveLength(3);
+    const frontend = section.items[0] as Group;
+    expect(frontend.name).toBe('Frontend');
+    // Frontend has: sublevel "Frameworks", sublevel "Build Tools", direct link
+    expect(frontend.children).toHaveLength(3);
+    expect(frontend.children[0].type).toBe('sublevel');
+    expect((frontend.children[0] as Sublevel).name).toBe('Frameworks');
+    expect((frontend.children[0] as Sublevel).links).toHaveLength(2);
+    expect(frontend.children[1].type).toBe('sublevel');
+    expect((frontend.children[1] as Sublevel).name).toBe('Build Tools');
+    expect(frontend.children[2].type).toBe('link');
+    // Orphan sublevel is the 3rd item in the section
+    const orphan = section.items[2] as Link;
+    expect(orphan.type).toBe('link');
+    expect(orphan.rawHtml).toContain('<code>');
   });
 });

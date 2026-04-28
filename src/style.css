@@ -432,6 +432,56 @@ h1.breadcrumbs {
   text-decoration: underline;
 }
 
+/* ── Sublevel (subdivision within a group) ─────────────────────────── */
+
+.sublevel {
+  margin: 2px 0 2px 13px;
+}
+
+.sublevel-header {
+  background-color: #f0f4f8;
+  padding: 3px 10px;
+  font-weight: 500;
+  color: #34495e;
+  font-size: 0.85em;
+  border-bottom: 1px solid #3498db;
+}
+
+.sublevel-links {
+  list-style: none;
+  padding: 3px 10px 4px 10px;
+  background-color: #f8fafe;
+}
+
+.sublevel-links li {
+  margin-bottom: 2px;
+  padding-left: 13px;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.sublevel-links li::before {
+  content: "\2022";
+  position: absolute;
+  left: 0;
+  color: #7fb3e0;
+  font-weight: bold;
+}
+
+.sublevel-links a {
+  color: #3498db;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-size: 0.85em;
+}
+
+.sublevel-links a:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   body {
