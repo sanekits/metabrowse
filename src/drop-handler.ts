@@ -198,6 +198,14 @@ async function insertEntries(entryLines: string[], config: DropConfig, via: stri
   }
 }
 
+/** Show link modal for a single URL, save if confirmed. Reusable entry point for drop and barouse capture. */
+export async function handleSingleLink(url: string, config: DropConfig, via: string): Promise<void> {
+  const result = await showLinkModal(url);
+  if (!result) return;
+  const line = buildEntryLine(result.title, result.url, result.comment);
+  await insertEntries([line], config, via);
+}
+
 function isInputFocused(): boolean {
   const tag = document.activeElement?.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
@@ -255,10 +263,7 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
       const url = uriList.split('\n').find(l => l && !l.startsWith('#'))?.trim();
       if (!url) return;
 
-      const result = await showLinkModal(url);
-      if (!result) return;
-      const line = buildEntryLine(result.title, result.url, result.comment);
-      await insertEntries([line], config, 'Drop');
+      await handleSingleLink(url, config, 'Drop');
     }
   }, { capture: true });
 

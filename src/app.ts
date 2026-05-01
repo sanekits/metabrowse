@@ -15,7 +15,7 @@ import type { SearchEntry } from './search.ts';
 import { initKeyboard } from './keyboard.ts';
 import { showEditor } from './editor.ts';
 import { showTreePanel } from './tree-panel.ts';
-import { initDropZone } from './drop-handler.ts';
+import { initDropZone, handleSingleLink } from './drop-handler.ts';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
@@ -31,6 +31,7 @@ let repo = '';
 let tree: TreeEntry[] = [];
 let contentPaths: string[] = [];
 let searchIndex: SearchEntry[] = [];
+let barouseAbort: AbortController | null = null;
 
 export async function init(): Promise<void> {
   host = localStorage.getItem(LS_HOST) || DEFAULT_HOST;
@@ -248,10 +249,24 @@ function doRender(route: Route, content: string): void {
   loadFavicons(app);
   initSearch(app, () => searchIndex);
   initKeyboard(app, { onTreePanel: handleTreePanel });
-  initDropZone(app, {
+  const dropConfig = {
     host, token, owner, repo, route,
     onSaved: () => handleRoute(route),
-  });
+  };
+  initDropZone(app, dropConfig);
+
+  // Listen for barouse tab-capture messages
+  barouseAbort?.abort();
+  barouseAbort = new AbortController();
+  if (route.kind === 'browse') {
+    window.addEventListener('message', async (e: MessageEvent) => {
+      if (e.data?.type !== 'barouse:tab-capture') return;
+      const url = e.data.payload?.url;
+      if (!url) return;
+      (e.source as Window)?.postMessage({ type: 'barouse:tab-capture-ack' }, '*');
+      await handleSingleLink(url, dropConfig, 'Barouse');
+    }, { signal: barouseAbort.signal });
+  }
 }
 
 function escapeHtml(s: string): string {
