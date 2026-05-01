@@ -215,6 +215,12 @@ function isInputFocused(): boolean {
 // document-level paste listeners don't accumulate across page renders.
 let pasteAbort: AbortController | null = null;
 
+/** Tear down any active paste listener (e.g., when entering edit mode). */
+export function teardownDropZone(): void {
+  pasteAbort?.abort();
+  pasteAbort = null;
+}
+
 /** Initialize drag-and-drop (URL only) and paste (text with links) on the page. */
 export function initDropZone(container: HTMLElement, config: DropConfig): void {
   const scrollable = container.querySelector('.scrollable-content') as HTMLElement | null;

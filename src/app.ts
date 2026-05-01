@@ -15,7 +15,7 @@ import type { SearchEntry } from './search.ts';
 import { initKeyboard } from './keyboard.ts';
 import { showEditor } from './editor.ts';
 import { showTreePanel } from './tree-panel.ts';
-import { initDropZone, handleSingleLink } from './drop-handler.ts';
+import { initDropZone, teardownDropZone, handleSingleLink } from './drop-handler.ts';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
@@ -182,6 +182,7 @@ async function buildSearchIndex(): Promise<void> {
 
 async function handleRoute(route: Route): Promise<void> {
   if (route.kind === 'edit') {
+    teardownDropZone();
     logInfo(`Edit: Opening editor for ${route.contentPath}`);
     await showEditor(app, host, token, owner, repo, route.dirPath);
     return;
