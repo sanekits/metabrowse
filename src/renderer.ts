@@ -282,10 +282,6 @@ export function renderPage(
 
   const editHash = route.dirPath ? `#/edit/${route.dirPath}` : '#/edit/';
   const editLink = el('a', { href: editHash, class: 'edit-link' }, 'Edit');
-  editLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.open(editHash, '_blank');
-  });
   headerActions.appendChild(editLink);
 
   const treeBtn = el('button', { class: 'tree-btn', title: 'Manage tree (t)' }, 'Tree');

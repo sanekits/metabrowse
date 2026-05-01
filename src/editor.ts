@@ -119,22 +119,14 @@ export async function showEditor(
       originalContent = currentContent;
       fileSha = newSha;
       showStatus('Saved');
-
-      // Refresh the opener page to pick up changes
-      try {
-        window.opener?.location.reload();
-      } catch {
-        // Cross-origin or no opener — ignore
-      }
     } catch (err) {
       showStatus(`Save failed: ${err instanceof Error ? err.message : err}`, true);
     }
   }
 
   function handleQuit(): void {
-    window.close();
-    // If window.close() is blocked, show message
-    setTimeout(() => { showStatus('You can close this tab.'); }, 100);
+    const browseHash = dirPath ? `#/${dirPath}` : '#/';
+    location.hash = browseHash;
   }
 
   ved.createEditor(document.getElementById('editor-container')!, originalContent, {
