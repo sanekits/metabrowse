@@ -1,13 +1,13 @@
 ## Home base
 - ➡️ T o d a y https://ghes.dev.example.com/testuser/notehub.default/issues/7    
-- N o t e h u b https://ghes.dev.example.com/pages/training-testorg/notehub.web/
+- N o t e h u b https://ghes.dev.example.com/pages/example-testorg/notehub.web/
 - 🚀 Spaces https://spaces.dx.example.com
 - 🔍Teach-patch search https://ghes.dev.example.com/search?q=teach-patch&type=repositories # Show all teach-patch hits
 - Chatgpt https://chatgpt.com
 
 ## Metabrowse + Notehub
   - Notehub-metabrowse maintenance https://ghes.dev.example.com/testuser/metabrowse-notehub-maint # Space for working on the code
-  - Metabrowse link repo https://ghes.dev.example.com/training-testorg/bb-metabrowse-links/  # Hosts the actual link text/
+  - Metabrowse link repo https://ghes.dev.example.com/example-testorg/bb-metabrowse-links/  # Hosts the actual link text/
   - Server restart and remote control: https://ghes.dev.example.com/testuser/metabrowse-notehub-maint/blob/main/README.md#remote-control # Thurs morning routine
 
 ## ?
