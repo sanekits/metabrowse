@@ -206,23 +206,10 @@ export async function handleSingleLink(url: string, config: DropConfig, via: str
   await insertEntries([line], config, via);
 }
 
-function isInputFocused(): boolean {
-  const tag = document.activeElement?.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-}
-
-// Module-level controller: aborted and replaced on each initDropZone call so
-// document-level paste listeners don't accumulate across page renders.
-let pasteAbort: AbortController | null = null;
-
-/** Tear down any active paste listener (e.g., when entering edit mode). */
-export function teardownDropZone(): void {
-  pasteAbort?.abort();
-  pasteAbort = null;
-}
+import { isInputFocused } from './lifecycle.ts';
 
 /** Initialize drag-and-drop (URL only) and paste (text with links) on the page. */
-export function initDropZone(container: HTMLElement, config: DropConfig): void {
+export function initDropZone(container: HTMLElement, config: DropConfig, signal: AbortSignal): void {
   const scrollable = container.querySelector('.scrollable-content') as HTMLElement | null;
   if (!scrollable) return;
 
@@ -274,11 +261,6 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
   }, { capture: true });
 
   // --- Paste handler (Ctrl+V with text containing links) ---
-  //
-  // Abort any previous paste listener (from a prior render), then create a new one.
-
-  pasteAbort?.abort();
-  pasteAbort = new AbortController();
 
   document.addEventListener('paste', async (e: ClipboardEvent) => {
     if (isInputFocused()) return;
@@ -299,7 +281,7 @@ export function initDropZone(container: HTMLElement, config: DropConfig): void {
       l.text && l.text !== l.url ? `- ${l.text} ${l.url}` : `- ${l.url}`,
     );
     await insertEntries(lines, config, 'Paste');
-  }, { signal: pasteAbort!.signal });
+  }, { signal });
 }
 
 function truncate(s: string, max: number): string {

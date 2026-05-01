@@ -1,21 +1,13 @@
 /** Keyboard shortcuts. Must be re-initialized after each page render. */
 
-let cleanup: (() => void) | null = null;
-
-function isInputFocused(): boolean {
-  const tag = document.activeElement?.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-}
+import { isInputFocused } from './lifecycle.ts';
 
 export interface KeyboardOpts {
   onTreePanel?: () => void;
 }
 
 /** Initialize keyboard shortcuts. Call after each render. */
-export function initKeyboard(container: HTMLElement, opts?: KeyboardOpts): void {
-  // Clean up previous listeners
-  if (cleanup) cleanup();
-
+export function initKeyboard(container: HTMLElement, opts: KeyboardOpts | undefined, signal: AbortSignal): void {
   const sections = container.querySelectorAll<HTMLDetailsElement>('.section');
   let savedStates: boolean[] = [];
   let allCollapsed = false;
@@ -78,6 +70,5 @@ export function initKeyboard(container: HTMLElement, opts?: KeyboardOpts): void 
     }
   }
 
-  document.addEventListener('keydown', handler);
-  cleanup = () => { document.removeEventListener('keydown', handler); };
+  document.addEventListener('keydown', handler, { signal });
 }

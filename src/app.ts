@@ -15,7 +15,8 @@ import type { SearchEntry } from './search.ts';
 import { initKeyboard } from './keyboard.ts';
 import { showEditor } from './editor.ts';
 import { showTreePanel } from './tree-panel.ts';
-import { initDropZone, teardownDropZone, handleSingleLink } from './drop-handler.ts';
+import { initDropZone, handleSingleLink } from './drop-handler.ts';
+import { startNavigation } from './lifecycle.ts';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
@@ -31,7 +32,6 @@ let repo = '';
 let tree: TreeEntry[] = [];
 let contentPaths: string[] = [];
 let searchIndex: SearchEntry[] = [];
-let barouseAbort: AbortController | null = null;
 
 export async function init(): Promise<void> {
   host = localStorage.getItem(LS_HOST) || DEFAULT_HOST;
@@ -181,8 +181,9 @@ async function buildSearchIndex(): Promise<void> {
 }
 
 async function handleRoute(route: Route): Promise<void> {
+  const signal = startNavigation();
+
   if (route.kind === 'edit') {
-    teardownDropZone();
     logInfo(`Edit: Opening editor for ${route.contentPath}`);
     await showEditor(app, host, token, owner, repo, route.dirPath);
     return;
@@ -201,7 +202,7 @@ async function handleRoute(route: Route): Promise<void> {
   const cached = getCachedContent(route.contentPath);
   if (cached) {
     logDebug(`Content: Using cached content for ${route.contentPath}`);
-    doRender(route, cached);
+    doRender(route, cached, signal);
   } else {
     app.innerHTML = `<div class="loading">Loading ${escapeHtml(route.dirPath || 'home')}...</div>`;
   }
@@ -213,7 +214,7 @@ async function handleRoute(route: Route): Promise<void> {
     logInfo(`Content: Loaded ${route.contentPath}`);
     setCachedContent(route.contentPath, content);
     if (content !== cached) {
-      doRender(route, content);
+      doRender(route, content, signal);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -226,7 +227,7 @@ async function handleRoute(route: Route): Promise<void> {
   }
 }
 
-function doRender(route: Route, content: string): void {
+function doRender(route: Route, content: string, signal: AbortSignal): void {
   const parsed = parseContent(content);
   const title = route.dirPath
     ? route.dirPath.split('/').pop()!.replace(/[-_]/g, ' ')
@@ -249,16 +250,14 @@ function doRender(route: Route, content: string): void {
   // Post-render setup
   loadFavicons(app);
   initSearch(app, () => searchIndex);
-  initKeyboard(app, { onTreePanel: handleTreePanel });
+  initKeyboard(app, { onTreePanel: handleTreePanel }, signal);
   const dropConfig = {
     host, token, owner, repo, route,
     onSaved: () => handleRoute(route),
   };
-  initDropZone(app, dropConfig);
+  initDropZone(app, dropConfig, signal);
 
   // Listen for barouse tab-capture messages
-  barouseAbort?.abort();
-  barouseAbort = new AbortController();
   if (route.kind === 'browse') {
     window.addEventListener('message', async (e: MessageEvent) => {
       if (e.data?.type !== 'barouse:tab-capture') return;
@@ -266,7 +265,7 @@ function doRender(route: Route, content: string): void {
       if (!url) return;
       (e.source as Window)?.postMessage({ type: 'barouse:tab-capture-ack' }, '*');
       await handleSingleLink(url, dropConfig, 'Barouse');
-    }, { signal: barouseAbort.signal });
+    }, { signal });
   }
 }
 
