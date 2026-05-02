@@ -156,6 +156,7 @@ VITE_BASE=/ npm run test:watch  # Watch mode
 npx tsc --noEmit            # Type check
 ```
 
+
 ## Requirements
 
 - Node.js 20+
