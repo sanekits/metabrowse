@@ -17,6 +17,8 @@ import { showEditor } from './editor.ts';
 import { showTreePanel } from './tree-panel.ts';
 import { initDropZone, handleSingleLink } from './drop-handler.ts';
 import { startNavigation } from './lifecycle.ts';
+import { detectBarouse, handleOpenAll, handleCapture, handleUpdate, cachePageLines } from './workspace.ts';
+import type { WorkspaceConfig } from './workspace.ts';
 
 const LS_TOKEN = 'notehub:token';
 const LS_HOST = 'notehub:host';
@@ -228,6 +230,7 @@ async function handleRoute(route: Route): Promise<void> {
 }
 
 function doRender(route: Route, content: string, signal: AbortSignal): void {
+  cachePageLines(content);
   const parsed = parseContent(content);
   const title = route.dirPath
     ? route.dirPath.split('/').pop()!.replace(/[-_]/g, ' ')
@@ -238,6 +241,12 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
     showTreePanel(getAppState(), refreshTree, route.dirPath);
   };
 
+  const wsConfig: WorkspaceConfig = {
+    host, token, owner, repo, route,
+    onSaved: () => handleRoute(route),
+    refreshTree,
+  };
+
   renderPage(app, doc, route, {
     contentPaths,
     owner,
@@ -245,6 +254,9 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
     host,
     onTreePanel: handleTreePanel,
     onSettings: () => showAuth(),
+    onOpenAll: (container) => handleOpenAll(container, wsConfig),
+    onCapture: () => handleCapture(wsConfig),
+    onUpdate: () => handleUpdate(wsConfig),
   });
 
   // Post-render setup
@@ -266,6 +278,14 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
       (e.source as Window)?.postMessage({ type: 'barouse:tab-capture-ack' }, '*');
       await handleSingleLink(url, dropConfig, 'Barouse');
     }, { signal });
+
+    // Detect barouse and show workspace buttons
+    detectBarouse().then((available) => {
+      if (!available || signal.aborted) return;
+      for (const btn of app.querySelectorAll<HTMLElement>('.workspace-btn')) {
+        btn.style.display = '';
+      }
+    });
   }
 }
 

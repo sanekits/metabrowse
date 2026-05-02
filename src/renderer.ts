@@ -11,6 +11,9 @@ export interface RenderConfig {
   host: string;
   onTreePanel?: () => void;
   onSettings?: () => void;
+  onOpenAll?: (container: HTMLElement) => void;
+  onCapture?: () => void;
+  onUpdate?: () => void;
 }
 
 /** Format a directory name for display: replace [-_] with spaces, title-case. */
@@ -301,6 +304,19 @@ export function renderPage(
     config.onSettings?.();
   });
   headerActions.appendChild(settingsBtn);
+
+  // Workspace buttons — hidden until barouse is detected
+  const wsOpenBtn = el('button', { class: 'workspace-btn', title: 'Open all links in new window', style: 'display:none' }, 'Open All');
+  wsOpenBtn.addEventListener('click', () => config.onOpenAll?.(container));
+  headerActions.appendChild(wsOpenBtn);
+
+  const wsCaptureBtn = el('button', { class: 'workspace-btn', title: 'Capture browser tabs as workspace', style: 'display:none' }, 'Capture');
+  wsCaptureBtn.addEventListener('click', () => config.onCapture?.());
+  headerActions.appendChild(wsCaptureBtn);
+
+  const wsUpdateBtn = el('button', { class: 'workspace-btn', title: 'Update page from browser tabs', style: 'display:none' }, 'Update');
+  wsUpdateBtn.addEventListener('click', () => config.onUpdate?.());
+  headerActions.appendChild(wsUpdateBtn);
 
   headerBar.appendChild(headerActions);
 
