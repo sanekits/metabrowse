@@ -328,6 +328,16 @@ export async function showTreePanel(
       iconSpan.className = 'tree-expand-icon';
       iconSpan.textContent = node.children.length === 0 ? '·' : node.expanded ? '▼' : '▶';
       iconSpan.style.cssText = 'width: 12px; text-align: center; color: #888; flex-shrink: 0;';
+      if (node.children.length > 0) {
+        iconSpan.classList.add('clickable');
+        iconSpan.style.cursor = 'pointer';
+        iconSpan.addEventListener('click', (e) => {
+          e.stopPropagation();
+          node.expanded = !node.expanded;
+          selectedIndex = visible.indexOf(node);
+          render();
+        });
+      }
       nodeEl.appendChild(iconSpan);
 
       // Name (or input for rename mode)
@@ -394,6 +404,13 @@ export async function showTreePanel(
       nodeEl.addEventListener('click', () => {
         selectedIndex = visible.indexOf(node);
         render();
+      });
+
+      nodeEl.addEventListener('dblclick', () => {
+        if (node.dirPath !== '') {
+          location.hash = `#/${node.dirPath}`;
+          overlay.remove();
+        }
       });
 
       listContainer.appendChild(nodeEl);

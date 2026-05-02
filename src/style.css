@@ -816,6 +816,10 @@ body:has(.editor-screen) {
   flex-shrink: 0;
 }
 
+.tree-expand-icon.clickable:hover {
+  color: #fff;
+}
+
 .tree-node-name {
   flex: 1;
   white-space: nowrap;
