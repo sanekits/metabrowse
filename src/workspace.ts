@@ -210,6 +210,158 @@ export function mergeWorkspace(existingContent: string, incomingTabs: Tab[]): st
   return result.join('\n');
 }
 
+// ── Update diff computation ───────────────────────────────────────
+
+interface UpdateDiff {
+  kept: Array<{ url: string; title: string }>;
+  added: Array<{ url: string; title: string }>;
+  removed: Array<{ url: string; title: string }>;
+}
+
+function computeUpdateDiff(existingContent: string, incomingTabs: Tab[]): UpdateDiff {
+  const existingByHash = new Map<string, { url: string; title: string }>();
+  for (const line of existingContent.split('\n')) {
+    const url = extractUrl(line);
+    if (url) {
+      const hash = generateTarget(url);
+      const titleText = line.replace(url, '').replace(/^\s*-\s*/, '').replace(/\s*#.*$/, '').trim();
+      existingByHash.set(hash, { url, title: titleText || url });
+    }
+  }
+
+  const incomingByHash = new Map<string, { url: string; title: string }>();
+  for (const tab of incomingTabs) {
+    const hash = generateTarget(tab.url);
+    incomingByHash.set(hash, { url: tab.url, title: tab.title || tab.url });
+  }
+
+  const kept: UpdateDiff['kept'] = [];
+  const added: UpdateDiff['added'] = [];
+  const removed: UpdateDiff['removed'] = [];
+
+  for (const [hash, info] of incomingByHash) {
+    if (existingByHash.has(hash)) {
+      kept.push(info);
+    } else {
+      added.push(info);
+    }
+  }
+
+  for (const [hash, info] of existingByHash) {
+    if (!incomingByHash.has(hash)) {
+      removed.push(info);
+    }
+  }
+
+  return { kept, added, removed };
+}
+
+// ── Update confirmation modal ─────────────────────────────────────
+
+function showUpdateConfirmModal(
+  contentPath: string,
+  diff: UpdateDiff,
+  tabCount: number,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'drop-modal-overlay';
+
+    const panel = document.createElement('div');
+    panel.className = 'drop-modal';
+    panel.style.width = '500px';
+    panel.style.maxHeight = '80vh';
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+
+    const header = document.createElement('div');
+    header.className = 'drop-modal-header';
+    header.textContent = `Update Workspace (${tabCount} tabs)`;
+    panel.appendChild(header);
+
+    const body = document.createElement('div');
+    body.style.cssText = 'flex:1; overflow-y:auto; padding:8px 14px; font-size:12px; color:#ccc;';
+
+    const targetEl = document.createElement('div');
+    targetEl.style.cssText = 'color:#aaa; padding:4px 0; font-size:11px;';
+    targetEl.textContent = `Target: ${contentPath}`;
+    body.appendChild(targetEl);
+
+    const warning = document.createElement('div');
+    warning.className = 'update-confirm-warning';
+    warning.textContent = 'This will add new links and remove old links from the target page.';
+    body.appendChild(warning);
+
+    function addSection(
+      label: string, items: Array<{ url: string; title: string }>,
+      color: string, extraClass?: string,
+    ): void {
+      const heading = document.createElement('div');
+      heading.style.cssText = `color:${color}; font-weight:bold; padding:6px 0 2px;`;
+      heading.textContent = `${label} (${items.length}):`;
+      body.appendChild(heading);
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+        if (extraClass) row.classList.add(extraClass);
+        row.textContent = item.title;
+        row.title = item.url;
+        body.appendChild(row);
+      }
+    }
+
+    if (diff.removed.length > 0) {
+      addSection('Will be removed', diff.removed, '#f38ba8', 'update-confirm-removed');
+    }
+    if (diff.added.length > 0) {
+      addSection('Will be added', diff.added, '#a6e3a1');
+    }
+    if (diff.kept.length > 0) {
+      const details = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.style.cssText = 'color:#888; font-size:12px; padding:6px 0 2px; cursor:pointer;';
+      summary.textContent = `Unchanged (${diff.kept.length})`;
+      details.appendChild(summary);
+      for (const item of diff.kept) {
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#888;';
+        row.textContent = item.title;
+        row.title = item.url;
+        details.appendChild(row);
+      }
+      body.appendChild(details);
+    }
+
+    panel.appendChild(body);
+
+    const form = document.createElement('form');
+    form.className = 'drop-modal-form';
+    form.innerHTML = `
+      <div class="drop-modal-buttons">
+        <button type="submit" class="drop-modal-ok">Update</button>
+        <button type="button" class="drop-modal-cancel">Cancel</button>
+      </div>
+    `;
+    panel.appendChild(form);
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const cancelBtn = panel.querySelector('.drop-modal-cancel') as HTMLButtonElement;
+    cancelBtn.focus();
+
+    function dismiss(result: boolean) {
+      overlay.remove();
+      resolve(result);
+    }
+
+    form.addEventListener('submit', (e) => { e.preventDefault(); dismiss(true); });
+    cancelBtn.addEventListener('click', () => dismiss(false));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(false); });
+    overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') dismiss(false); });
+  });
+}
+
 // ── Tab → markdown formatting ──────────────────────────────────────
 
 export function formatTabsAsMarkdown(name: string, tabs: Tab[]): string {
@@ -433,6 +585,9 @@ export async function handleUpdate(config: WorkspaceConfig): Promise<void> {
     const { content, sha } = await getFileContent(
       config.host, config.token, config.owner, config.repo, contentPath,
     );
+    const diff = computeUpdateDiff(content, tabs);
+    const confirmed = await showUpdateConfirmModal(contentPath, diff, tabs.length);
+    if (!confirmed) return;
     const merged = mergeWorkspace(content, tabs);
     await updateFileContent(
       config.host, config.token, config.owner, config.repo,

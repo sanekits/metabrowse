@@ -967,6 +967,20 @@ body:has(.editor-screen) {
   background: #444;
 }
 
+/* Update confirmation modal extras */
+.update-confirm-warning {
+  color: #f59e0b;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 8px 0;
+  line-height: 1.4;
+}
+
+.update-confirm-removed {
+  text-decoration: line-through;
+  color: #f38ba8;
+}
+
 /* Import toast notification */
 .import-toast {
   position: fixed;
