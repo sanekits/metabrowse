@@ -58,10 +58,14 @@ export async function detectBarouse(): Promise<boolean> {
   }
 }
 
+function isCapturableUrl(url: string): boolean {
+  return /^https?:\/\//.test(url);
+}
+
 export async function queryTabs(windowId?: number): Promise<Tab[]> {
   const tabs = await sendBarouseMessage<Tab[]>('barouse:query-tabs', windowId != null ? { windowId } : undefined);
   const self = location.href;
-  return tabs.filter((t) => t.url !== self);
+  return tabs.filter((t) => t.url !== self && isCapturableUrl(t.url));
 }
 
 interface OpenWorkspaceResult {
