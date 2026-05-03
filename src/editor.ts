@@ -2,6 +2,7 @@
 
 
 import { getFileContent, updateFileContent } from './github.ts';
+import { setVeditorVersion } from './status-bar.ts';
 
 // veditor base URL — must be set via VITE_VEDITOR_BASE at build time.
 const VEDITOR_BASE = import.meta.env.VITE_VEDITOR_BASE as string | undefined;
@@ -27,10 +28,7 @@ async function loadVeditor(): Promise<typeof import('./veditor.d.ts')> {
   }
 
   veditor = await import(/* @vite-ignore */ `${VEDITOR_BASE}/veditor.js`);
-  const badge = document.getElementById('version-badge');
-  if (badge && veditor!.VERSION && !badge.textContent?.includes('ve')) {
-    badge.textContent += ` \u00b7 ve${veditor!.VERSION}`;
-  }
+  if (veditor!.VERSION) setVeditorVersion(veditor!.VERSION);
   return veditor!;
 }
 

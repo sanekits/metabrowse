@@ -279,11 +279,10 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
       await handleSingleLink(url, dropConfig, 'Barouse');
     }, { signal });
 
-    // Detect barouse and show workspace buttons
     detectBarouse().then((available) => {
       if (!available || signal.aborted) return;
-      for (const btn of app.querySelectorAll<HTMLElement>('.workspace-btn')) {
-        btn.style.display = '';
+      for (const btn of app.querySelectorAll<HTMLButtonElement>('.workspace-btn')) {
+        btn.disabled = false;
       }
     });
   }

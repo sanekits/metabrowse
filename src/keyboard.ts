@@ -54,8 +54,8 @@ export function initKeyboard(container: HTMLElement, opts: KeyboardOpts | undefi
       location.reload();
     }
 
-    // "c" — collapse/restore all sections
-    if (e.key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    // "x" — collapse/restore all sections
+    if (e.key === 'x' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (isInputFocused()) return;
       if (sections.length === 0) return;
       e.preventDefault();
@@ -66,6 +66,29 @@ export function initKeyboard(container: HTMLElement, opts: KeyboardOpts | undefi
       } else {
         sections.forEach((s, i) => { s.open = i < savedStates.length ? savedStates[i] : true; });
         allCollapsed = false;
+      }
+    }
+
+    // "w" — Open Workspace
+    if (e.key === 'w' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (isInputFocused()) return;
+      const btn = container.querySelector<HTMLButtonElement>('.workspace-btn:not([disabled])');
+      if (btn?.title.startsWith('Open Workspace')) { e.preventDefault(); btn.click(); }
+    }
+
+    // "c" — Create Workspace
+    if (e.key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (isInputFocused()) return;
+      for (const btn of container.querySelectorAll<HTMLButtonElement>('.workspace-btn:not([disabled])')) {
+        if (btn.title.startsWith('Create Workspace')) { e.preventDefault(); btn.click(); break; }
+      }
+    }
+
+    // "u" — Update Workspace
+    if (e.key === 'u' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (isInputFocused()) return;
+      for (const btn of container.querySelectorAll<HTMLButtonElement>('.workspace-btn:not([disabled])')) {
+        if (btn.title.startsWith('Update Workspace')) { e.preventDefault(); btn.click(); break; }
       }
     }
   }

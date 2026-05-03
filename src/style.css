@@ -165,107 +165,63 @@ h1.breadcrumbs {
 
 .header-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
 }
 
-.edit-link {
-  display: inline-block;
-  padding: 5px 11px;
-  background-color: #95a5a6;
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1;
+  border-radius: 3px;
+  border: none;
   color: white;
+  cursor: pointer;
   text-decoration: none;
-  border-radius: 3px;
-  font-size: 0.7em;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  white-space: nowrap;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
-.edit-link:hover {
-  background-color: #7f8c8d;
+.icon-btn:hover {
+  transform: scale(1.1);
 }
 
-.tree-btn {
-  display: inline-block;
-  padding: 5px 11px;
-  background-color: #16a34a;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  font-size: 0.7em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
 }
 
-.tree-btn:hover {
-  background-color: #15803d;
-}
+.edit-link { background-color: #95a5a6; }
+.edit-link:hover { background-color: #7f8c8d; }
 
-.logs-btn {
-  display: inline-block;
-  padding: 5px 11px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  font-size: 0.7em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
-}
+.tree-btn { background-color: #16a34a; }
+.tree-btn:hover { background-color: #15803d; }
 
-.logs-btn:hover {
-  background-color: #2980b9;
-}
+.logs-btn { background-color: #3498db; }
+.logs-btn:hover { background-color: #2980b9; }
 
-.settings-btn {
-  display: inline-block;
-  padding: 5px 11px;
-  background-color: #95a5a6;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  font-size: 0.7em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
-}
+.settings-btn { background-color: #95a5a6; }
+.settings-btn:hover { background-color: #7f8c8d; }
 
-.settings-btn:hover {
-  background-color: #7f8c8d;
-}
+.collapse-btn { background-color: #6b7280; }
+.collapse-btn:hover { background-color: #4b5563; }
 
-.workspace-btn {
-  display: inline-block;
-  padding: 5px 11px;
-  background-color: #8b5cf6;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  font-size: 0.7em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
-}
-
-.workspace-btn:hover {
-  background-color: #7c3aed;
-}
+.workspace-btn { background-color: #8b5cf6; }
+.workspace-btn:hover { background-color: #7c3aed; }
 
 /* Children navigation */
 .children-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   margin-bottom: 8px;
-  padding: 5px 8px;
+  padding: 3px 6px;
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
@@ -273,13 +229,13 @@ h1.breadcrumbs {
 
 .child-link {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 2px 7px;
   background-color: #34db62;
   color: black;
   text-decoration: none;
   border-radius: 3px;
   font-weight: 500;
-  font-size: 0.9em;
+  font-size: 0.63em;
   transition: background-color 0.2s, transform 0.1s;
   white-space: nowrap;
 }
@@ -670,34 +626,39 @@ h1.breadcrumbs {
   font-size: 0.85em;
 }
 
-/* Keyboard shortcut help footer */
-.shortcut-help {
+/* Status bar */
+.status-bar {
   flex-shrink: 0;
-  padding: 6px 12px;
-  font-size: 0.75em;
-  color: #656d76;
-  text-align: center;
-  background-color: #f5f5f5;
-  border-top: 1px solid #d0d7de;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 12px;
+  font-size: 0.72em;
+  background-color: #007acc;
+  color: #fff;
+  min-height: 22px;
 }
 
-.shortcut-help kbd {
-  display: inline-block;
-  padding: 2px 6px;
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 0.92em;
-  color: #1f2328;
-  background-color: #f6f8fa;
-  border: 1px solid #d0d7de;
-  border-bottom-color: #bcc3cb;
-  border-radius: 6px;
-  box-shadow: inset 0 -1px 0 #d0d7de;
-  line-height: 1.4;
+.status-message {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.shortcut-sep {
-  margin: 0 8px;
-  color: #d0d7de;
+.status-message.status-error {
+  color: #ffcccc;
+  font-weight: 600;
+}
+
+.status-message.status-success {
+  color: #c8ffc8;
+}
+
+.status-version {
+  flex-shrink: 0;
+  margin-left: 12px;
+  opacity: 0.85;
 }
 
 mark {
@@ -769,19 +730,6 @@ body:has(.editor-screen) {
   color: #a6adc8;
   font-size: 1.125rem;
   background: #1e1e2e;
-}
-
-.version-badge {
-  position: fixed;
-  bottom: 10px;
-  right: 60px;
-  font-size: 10px;
-  pointer-events: none;
-  z-index: 9999;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.65);
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
 /* Tree panel modal */

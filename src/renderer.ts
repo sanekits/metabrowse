@@ -3,6 +3,8 @@
 import type { HTMLDocument, HTMLLink, HTMLSublevel, HTMLGroup, HTMLLinkGroup, HTMLSection } from './transformer.ts';
 import type { Route } from './router.ts';
 import { createLogViewer } from './logging-client.ts';
+import { el } from './dom.ts';
+import { createStatusBar } from './status-bar.ts';
 
 export interface RenderConfig {
   contentPaths: string[];
@@ -41,29 +43,6 @@ function buildBreadcrumbs(dirPath: string): Array<{ name: string; hash: string }
     crumbs.push({ name: formatDirName(parts[i]), hash: `#/${path}` });
   }
   return crumbs;
-}
-
-// ── DOM helpers ─────────────────────────────────────────────────────
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  attrs?: Record<string, string>,
-  ...children: Array<Node | string>
-): HTMLElementTagNameMap[K] {
-  const element = document.createElement(tag);
-  if (attrs) {
-    for (const [k, v] of Object.entries(attrs)) {
-      element.setAttribute(k, v);
-    }
-  }
-  for (const child of children) {
-    if (typeof child === 'string') {
-      element.appendChild(document.createTextNode(child));
-    } else {
-      element.appendChild(child);
-    }
-  }
-  return element;
 }
 
 // ── Copy-to-clipboard ───────────────────────────────────────────────
@@ -284,37 +263,35 @@ export function renderPage(
   const headerActions = el('div', { class: 'header-actions' });
 
   const editHash = route.dirPath ? `#/edit/${route.dirPath}` : '#/edit/';
-  const editLink = el('a', { href: editHash, class: 'edit-link' }, 'Edit');
-  headerActions.appendChild(editLink);
+  headerActions.appendChild(el('a', { href: editHash, class: 'edit-link icon-btn', title: 'Edit (e)' }, '✎'));
 
-  const treeBtn = el('button', { class: 'tree-btn', title: 'Manage tree (t)' }, 'Tree');
-  treeBtn.addEventListener('click', () => {
-    config.onTreePanel?.();
-  });
+  const treeBtn = el('button', { class: 'tree-btn icon-btn', title: 'Tree (t)' }, '🌳');
+  treeBtn.addEventListener('click', () => config.onTreePanel?.());
   headerActions.appendChild(treeBtn);
 
-  const logsBtn = el('button', { class: 'logs-btn', title: 'View debug logs' }, 'Logs');
-  logsBtn.addEventListener('click', () => {
-    document.body.appendChild(createLogViewer());
-  });
+  const logsBtn = el('button', { class: 'logs-btn icon-btn', title: 'View logs' }, '📜');
+  logsBtn.addEventListener('click', () => document.body.appendChild(createLogViewer()));
   headerActions.appendChild(logsBtn);
 
-  const settingsBtn = el('button', { class: 'settings-btn', title: 'Settings' }, 'Settings');
-  settingsBtn.addEventListener('click', () => {
-    config.onSettings?.();
-  });
+  const settingsBtn = el('button', { class: 'settings-btn icon-btn', title: 'Settings' }, '⚙');
+  settingsBtn.addEventListener('click', () => config.onSettings?.());
   headerActions.appendChild(settingsBtn);
 
-  // Workspace buttons — hidden until barouse is detected
-  const wsOpenBtn = el('button', { class: 'workspace-btn', title: 'Open all links in new window', style: 'display:none' }, 'Open All');
+  const collapseBtn = el('button', { class: 'collapse-btn icon-btn', title: 'Collapse/restore (x)' }, '⊟');
+  collapseBtn.addEventListener('click', () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+  });
+  headerActions.appendChild(collapseBtn);
+
+  const wsOpenBtn = el('button', { class: 'workspace-btn icon-btn', title: 'Open Workspace (w)', disabled: '' }, '🔗');
   wsOpenBtn.addEventListener('click', () => config.onOpenAll?.(container));
   headerActions.appendChild(wsOpenBtn);
 
-  const wsCaptureBtn = el('button', { class: 'workspace-btn', title: 'Capture browser tabs as workspace', style: 'display:none' }, 'Capture');
+  const wsCaptureBtn = el('button', { class: 'workspace-btn icon-btn', title: 'Create Workspace (c)', disabled: '' }, '📷');
   wsCaptureBtn.addEventListener('click', () => config.onCapture?.());
   headerActions.appendChild(wsCaptureBtn);
 
-  const wsUpdateBtn = el('button', { class: 'workspace-btn', title: 'Update page from browser tabs', style: 'display:none' }, 'Update');
+  const wsUpdateBtn = el('button', { class: 'workspace-btn icon-btn', title: 'Update Workspace (u)', disabled: '' }, '🔄');
   wsUpdateBtn.addEventListener('click', () => config.onUpdate?.());
   headerActions.appendChild(wsUpdateBtn);
 
@@ -365,18 +342,7 @@ export function renderPage(
   container.appendChild(scrollable);
   target.appendChild(container);
 
-  // Footer
-  const footer = document.createElement('footer');
-  footer.className = 'shortcut-help';
-  footer.innerHTML = [
-    '<kbd>t</kbd> Tree',
-    '<kbd>e</kbd> Edit',
-    '<kbd>/</kbd> Search page',
-    '<kbd>Ctrl+K</kbd> Search all',
-    '<kbd>c</kbd> Collapse/restore',
-    '<kbd>r</kbd> Reload',
-  ].join('<span class="shortcut-sep">|</span>');
-  target.appendChild(footer);
+  target.appendChild(createStatusBar());
 
   // Wire up copy-to-clipboard
   setupCopyHandler(target);
