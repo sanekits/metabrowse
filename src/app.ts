@@ -265,6 +265,19 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
   initSearch(app, () => searchIndex);
   initKeyboard(app, { onTreePanel: handleTreePanel }, signal);
   initLinkNav(app, signal);
+
+  window.addEventListener('message', (e: MessageEvent) => {
+    if (e.data?.type !== 'barouse:activate') return;
+    const firstLink = app.querySelector<HTMLLIElement>(
+      '.links > li, .group-links > li, .sublevel-links > li',
+    );
+    if (firstLink) {
+      app.querySelector('.link-selected')?.classList.remove('link-selected');
+      firstLink.classList.add('link-selected');
+      firstLink.scrollIntoView({ block: 'nearest' });
+    }
+  }, { signal });
+
   const dropConfig = {
     host, token, owner, repo, route,
     onSaved: () => handleRoute(route),
