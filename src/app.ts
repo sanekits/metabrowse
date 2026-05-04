@@ -266,15 +266,22 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
   initKeyboard(app, { onTreePanel: handleTreePanel }, signal);
   initLinkNav(app, signal);
 
+  const firstLink = app.querySelector<HTMLLIElement>(
+    '.links > li, .group-links > li, .sublevel-links > li',
+  );
+  if (firstLink) {
+    firstLink.classList.add('link-selected');
+  }
+
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.data?.type !== 'barouse:activate') return;
-    const firstLink = app.querySelector<HTMLLIElement>(
+    const link = app.querySelector<HTMLLIElement>(
       '.links > li, .group-links > li, .sublevel-links > li',
     );
-    if (firstLink) {
+    if (link) {
       app.querySelector('.link-selected')?.classList.remove('link-selected');
-      firstLink.classList.add('link-selected');
-      firstLink.scrollIntoView({ block: 'nearest' });
+      link.classList.add('link-selected');
+      link.scrollIntoView({ block: 'nearest' });
     }
   }, { signal });
 
