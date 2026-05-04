@@ -13,6 +13,7 @@ import { loadFavicons } from './favicon.ts';
 import { initSearch, buildEntry } from './search.ts';
 import type { SearchEntry } from './search.ts';
 import { initKeyboard } from './keyboard.ts';
+import { initLinkNav } from './link-nav.ts';
 import { showEditor } from './editor.ts';
 import { showTreePanel } from './tree-panel.ts';
 import { initDropZone, handleSingleLink } from './drop-handler.ts';
@@ -263,6 +264,7 @@ function doRender(route: Route, content: string, signal: AbortSignal): void {
   loadFavicons(app);
   initSearch(app, () => searchIndex);
   initKeyboard(app, { onTreePanel: handleTreePanel }, signal);
+  initLinkNav(app, signal);
   const dropConfig = {
     host, token, owner, repo, route,
     onSaved: () => handleRoute(route),

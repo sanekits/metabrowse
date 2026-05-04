@@ -474,6 +474,14 @@ h1.breadcrumbs {
   text-decoration: underline;
 }
 
+/* Vim-style link selection */
+.link-selected {
+  background-color: #e8f4fd;
+  outline: 2px solid #3498db;
+  outline-offset: -1px;
+  border-radius: 2px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   body {
