@@ -8,7 +8,7 @@ const veditorDev = existsSync(devPluginPath)
   ? (await import(devPluginPath.href)).default
   : () => ({ name: 'veditor-dev-noop' });
 
-const buildHash = execSync('../scripts/source-hash.sh').toString().trim();
+const buildHash = execSync('(git describe --always; git diff) | sha256sum | cut -c1-12').toString().trim();
 
 const base = process.env.VITE_BASE;
 if (!base) {
