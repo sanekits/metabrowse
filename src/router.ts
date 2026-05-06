@@ -32,6 +32,9 @@ export function parseHash(hash: string): Route {
   // Remove trailing slashes
   path = path.replace(/\/+$/, '');
 
+  // Decode percent-encoding (browser encodes spaces in fragments as %20)
+  try { path = decodeURIComponent(path); } catch { /* leave as-is if malformed */ }
+
   // Build content path
   const contentPath = path ? `text/${path}/README.md` : 'text/README.md';
 

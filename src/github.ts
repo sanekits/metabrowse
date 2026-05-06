@@ -7,6 +7,10 @@ function apiBase(host: string): string {
   return `https://${host}/api/v3`;
 }
 
+function encodePath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 function headers(token: string): HeadersInit {
   return {
     Authorization: `Bearer ${token}`,
@@ -127,7 +131,7 @@ export async function getFileContent(
 ): Promise<FileContent> {
   const data = await apiFetch<ContentsResponse>(
     host, token,
-    `/repos/${owner}/${repo}/contents/${path}`,
+    `/repos/${owner}/${repo}/contents/${encodePath(path)}`,
   );
   if (!data.content) {
     throw new Error('File too large for Contents API. Only files under 1MB are supported.');
@@ -153,7 +157,7 @@ export async function updateFileContent(
   owner: string, repo: string, path: string,
   content: string, sha: string, message: string,
 ): Promise<string> {
-  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${path}`, {
+  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${encodePath(path)}`, {
     method: 'PUT',
     headers: headers(token),
     body: JSON.stringify({
@@ -179,7 +183,7 @@ export async function createFile(
   owner: string, repo: string, path: string,
   content: string, message: string,
 ): Promise<string> {
-  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${path}`, {
+  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${encodePath(path)}`, {
     method: 'PUT',
     headers: headers(token),
     body: JSON.stringify({
@@ -201,7 +205,7 @@ export async function deleteFile(
   owner: string, repo: string, path: string,
   sha: string, message: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${path}`, {
+  const res = await fetch(`${apiBase(host)}/repos/${owner}/${repo}/contents/${encodePath(path)}`, {
     method: 'DELETE',
     headers: headers(token),
     body: JSON.stringify({

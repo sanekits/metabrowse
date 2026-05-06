@@ -169,7 +169,7 @@ export async function renameNode(
     // For each file under oldDirPath, copy to newDirPath location
     for (const path of allPaths) {
       const oldFilePath = `text/${path}/README.md`;
-      const newPath = path.replace(new RegExp(`^${oldDirPath}`), newDirPath);
+      const newPath = newDirPath + path.slice(oldDirPath.length);
       const newFilePath = `text/${newPath}/README.md`;
 
       // Fetch content + SHA
