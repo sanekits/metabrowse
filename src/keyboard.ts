@@ -2,6 +2,7 @@
 
 import { isInputFocused } from './lifecycle.ts';
 import { isModalOpen } from './modal-stack.ts';
+import { getCurrentRoute, navigateTo } from './router.ts';
 
 export interface KeyboardOpts {
   onTreePanel?: () => void;
@@ -86,12 +87,14 @@ export function initKeyboard(container: HTMLElement, opts: KeyboardOpts | undefi
       }
     }
 
-    // "u" — Update Workspace
+    // "u" — navigate up to parent directory
     if (e.key === 'u' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (isInputFocused()) return;
-      for (const btn of container.querySelectorAll<HTMLButtonElement>('.workspace-btn:not([disabled])')) {
-        if (btn.title.startsWith('Update Workspace')) { e.preventDefault(); btn.click(); break; }
-      }
+      const { dirPath } = getCurrentRoute();
+      if (!dirPath) return;
+      e.preventDefault();
+      const parentPath = dirPath.includes('/') ? dirPath.slice(0, dirPath.lastIndexOf('/')) : '';
+      navigateTo(parentPath);
     }
   }
 

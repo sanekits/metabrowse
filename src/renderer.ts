@@ -291,7 +291,7 @@ export function renderPage(
   wsCaptureBtn.addEventListener('click', () => config.onCapture?.());
   headerActions.appendChild(wsCaptureBtn);
 
-  const wsUpdateBtn = el('button', { class: 'workspace-btn icon-btn', title: 'Update Workspace (u)', disabled: '' }, '🔄');
+  const wsUpdateBtn = el('button', { class: 'workspace-btn icon-btn', title: 'Update Workspace', disabled: '' }, '🔄');
   wsUpdateBtn.addEventListener('click', () => config.onUpdate?.());
   headerActions.appendChild(wsUpdateBtn);
 
