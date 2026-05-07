@@ -1,6 +1,7 @@
 /** Keyboard shortcuts. Must be re-initialized after each page render. */
 
 import { isInputFocused } from './lifecycle.ts';
+import { isModalOpen } from './modal-stack.ts';
 
 export interface KeyboardOpts {
   onTreePanel?: () => void;
@@ -13,6 +14,7 @@ export function initKeyboard(container: HTMLElement, opts: KeyboardOpts | undefi
   let allCollapsed = false;
 
   function handler(e: KeyboardEvent): void {
+    if (isModalOpen()) return;
     // "t" — open tree panel
     if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (isInputFocused()) return;

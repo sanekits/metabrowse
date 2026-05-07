@@ -3,6 +3,7 @@
 import type { TreeEntry } from './github.ts';
 import { createNode, deleteNode, confirmDeleteNodes, renameNode } from './tree-ops.ts';
 import { logInfo } from './logging-client.ts';
+import { pushModal, popModal } from './modal-stack.ts';
 
 interface TreeNode {
   name: string;
@@ -736,7 +737,8 @@ export async function showTreePanel(
     }
   });
 
-  // Attach keyboard handler to document (panel is just a div, won't get focus)
+  pushModal(overlay);
+
   const keyListener = (e: KeyboardEvent) => {
     if (overlay.parentElement) {
       handleKeydown(e);
@@ -744,9 +746,10 @@ export async function showTreePanel(
   };
   document.addEventListener('keydown', keyListener);
 
-  // Clean up listener when overlay is removed
+  // Clean up listener and modal stack when overlay is removed
   const originalRemove = overlay.remove.bind(overlay);
   overlay.remove = function() {
+    popModal(overlay);
     document.removeEventListener('keydown', keyListener);
     originalRemove();
   };

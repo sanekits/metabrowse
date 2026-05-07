@@ -4,6 +4,7 @@ import type { Route } from './router.ts';
 import { getFileContent, updateFileContent } from './github.ts';
 import { removeCachedContent } from './cache.ts';
 import { logInfo, logError } from './logging-client.ts';
+import { pushModal, popModal } from './modal-stack.ts';
 
 export interface DropConfig {
   host: string;
@@ -70,6 +71,7 @@ function showLinkModal(url: string): Promise<{ title: string; url: string; comme
 
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+    pushModal(overlay);
 
     const titleInput = panel.querySelector('#drop-title') as HTMLInputElement;
     const urlInput = panel.querySelector('#drop-url') as HTMLInputElement;
@@ -81,6 +83,7 @@ function showLinkModal(url: string): Promise<{ title: string; url: string; comme
     titleInput.select();
 
     function dismiss(result: { title: string; url: string; comment: string } | null) {
+      popModal(overlay);
       overlay.remove();
       resolve(result);
     }

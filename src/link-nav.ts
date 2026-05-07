@@ -1,6 +1,7 @@
 /** Vim-style j/k link navigation. */
 
 import { isInputFocused } from './lifecycle.ts';
+import { isModalOpen } from './modal-stack.ts';
 
 const SELECTED_CLASS = 'link-selected';
 
@@ -40,6 +41,7 @@ export function initLinkNav(container: HTMLElement, signal: AbortSignal): void {
   }
 
   function handler(e: KeyboardEvent): void {
+    if (isModalOpen()) return;
     if (isInputFocused()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 

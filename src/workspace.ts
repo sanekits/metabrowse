@@ -5,6 +5,7 @@ import { getFileContent, updateFileContent, createFile } from './github.ts';
 import { removeCachedContent } from './cache.ts';
 import { logInfo, logError } from './logging-client.ts';
 import type { Route } from './router.ts';
+import { pushModal, popModal } from './modal-stack.ts';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -346,11 +347,13 @@ function showUpdateConfirmModal(
 
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+    pushModal(overlay);
 
     const cancelBtn = panel.querySelector('.drop-modal-cancel') as HTMLButtonElement;
     cancelBtn.focus();
 
     function dismiss(result: boolean) {
+      popModal(overlay);
       overlay.remove();
       resolve(result);
     }
@@ -437,11 +440,13 @@ function showCaptureModal(tabs: Tab[]): Promise<string | null> {
 
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+    pushModal(overlay);
 
     const nameInput = panel.querySelector('#ws-name') as HTMLInputElement;
     nameInput.focus();
 
     function dismiss(result: string | null) {
+      popModal(overlay);
       overlay.remove();
       resolve(result);
     }
