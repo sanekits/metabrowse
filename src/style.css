@@ -482,6 +482,19 @@ h1.breadcrumbs {
   border-radius: 2px;
 }
 
+/* Child-button keyboard focus */
+.children-nav-active {
+  outline: 2px solid #3498db;
+  outline-offset: 1px;
+}
+
+.child-link-selected {
+  outline: 2px solid #1a7dc4;
+  outline-offset: 1px;
+  background-color: #2bc454;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   body {
