@@ -10,6 +10,7 @@ const VEDITOR_BASE = import.meta.env.VITE_VEDITOR_BASE as string | undefined;
 // veditor API — populated on first use.
 let veditor: typeof import('./veditor.d.ts') | null = null;
 let veditorCssLoaded = false;
+const CACHE_BUST = `v=${Date.now()}`;
 
 async function loadVeditor(): Promise<typeof import('./veditor.d.ts')> {
   if (veditor) return veditor;
@@ -22,12 +23,12 @@ async function loadVeditor(): Promise<typeof import('./veditor.d.ts')> {
   if (!veditorCssLoaded) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = `${VEDITOR_BASE}/veditor.css`;
+    link.href = `${VEDITOR_BASE}/veditor.css?${CACHE_BUST}`;
     document.head.appendChild(link);
     veditorCssLoaded = true;
   }
 
-  veditor = await import(/* @vite-ignore */ `${VEDITOR_BASE}/veditor.js`);
+  veditor = await import(/* @vite-ignore */ `${VEDITOR_BASE}/veditor.js?${CACHE_BUST}`);
   if (veditor!.VERSION) setVeditorVersion(veditor!.VERSION);
   return veditor!;
 }
